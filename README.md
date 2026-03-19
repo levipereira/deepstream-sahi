@@ -93,24 +93,8 @@ deepstream-sahi/
 
 Adds intelligent TensorRT engine file naming and auto-discovery. Instead of rebuilding the `.engine` file on every pipeline start, it generates a standardized name encoding batch size, input dimensions, GPU model, compute capability, TensorRT version, and precision:
 
-```
-{model}_b{batch}_i{W}x{H}_{compute_cap}_{gpu}_{trt_ver}_{precision}.engine
-```
-
-See [`ENGINE_FILE_NAMING_FEATURE.md`](deepstream_source/libs/nvdsinfer/ENGINE_FILE_NAMING_FEATURE.md) for the full specification.
-
-> Forum discussion: [Smart Engine File Caching for nvdsinfer](https://forums.developer.nvidia.com/t/feature-contribution-smart-engine-file-caching-for-nvdsinfer/358537)
-
 ### nvdsinfer_yolo — YOLO Custom Bounding-Box Parser
-
 Custom parsing functions for YOLO models exported with **EfficientNMS_TRT** and **EfficientNMSX_TRT + ROIAlign_TRT** TensorRT plugins:
-
-| Function | Model Type |
-|----------|-----------|
-| `NvDsInferYoloNMS` | Detection |
-| `NvDsInferYoloMask` | Instance Segmentation |
-
-> Source: [levipereira/nvdsinfer_yolo](https://github.com/levipereira/nvdsinfer_yolo)
 
 ## Key Results
 
