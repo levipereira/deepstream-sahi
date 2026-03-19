@@ -1,5 +1,9 @@
 # DeepStream SAHI
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![DeepStream](https://img.shields.io/badge/NVIDIA-DeepStream%208.0-76B900?logo=nvidia)](https://developer.nvidia.com/deepstream-sdk)
+[![TensorRT](https://img.shields.io/badge/TensorRT-10.x-orange)](https://developer.nvidia.com/tensorrt)
+
 Native GStreamer plugins that integrate **SAHI** (Slicing Aided Hyper Inference) into NVIDIA DeepStream for real-time small-object detection in high-resolution video streams.
 
 > **Inspired by [SAHI](https://github.com/obss/sahi)** — the original framework-agnostic sliced inference library by OBSS. This project implements the SAHI slicing and GreedyNMM merging algorithms as native C++ GStreamer plugins for zero-copy, GPU-accelerated inference within DeepStream pipelines.
@@ -13,6 +17,79 @@ Native GStreamer plugins that integrate **SAHI** (Slicing Aided Hyper Inference)
 ```
 nvstreammux → nvsahipreprocess → nvinfer → nvsahipostprocess → nvtracker → nvdsosd
 ```
+
+---
+
+## Results
+
+All tests on **2560×1440 aerial surveillance video** | **NVIDIA RTX 5080** | **FP16** | **Batch 16**
+
+### SAHI vs No SAHI — Detection Improvement
+
+#### visdrone-full-640 (640×640, full-frame trained)
+
+| Video | Scene | No SAHI | SAHI | Improvement |
+|-------|-------|---------|------|-------------|
+| aerial_crowding_01 | Dense pedestrian crowd | 13.8 obj/frame | **84.2** obj/frame | **+510%** |
+| aerial_crowding_02 | Very dense crowd | 206.2 obj/frame | **664.7** obj/frame | **+222%** |
+| aerial_vehicles | Dense vehicle traffic | 92.3 obj/frame | **252.5** obj/frame | **+174%** |
+
+#### visdrone-sliced-448 (448×448, SAHI-aware trained)
+
+| Video | Scene | No SAHI | SAHI | Improvement |
+|-------|-------|---------|------|-------------|
+| aerial_crowding_01 | Dense pedestrian crowd | 2.3 obj/frame | **85.3** obj/frame | **+3,619%** |
+| aerial_crowding_02 | Very dense crowd | 35.9 obj/frame | **614.9** obj/frame | **+1,613%** |
+| aerial_vehicles | Dense vehicle traffic | 28.6 obj/frame | **226.7** obj/frame | **+694%** |
+
+> The sliced-trained model (448×448) benefits dramatically more from SAHI because its native resolution is too small for 2560×1440 input. Without SAHI, small objects are invisible. With SAHI slicing, the model operates at its intended scale.
+
+### Full-Frame vs Sliced Training — Both with SAHI
+
+| Video | full-640 + SAHI | sliced-448 + SAHI | Difference |
+|-------|----------------|------------------|------------|
+| aerial_crowding_01 | 84.2 | 85.3 | +1.3% |
+| aerial_crowding_02 | 664.7 | 614.9 | -7.5% |
+| aerial_vehicles | 252.5 | 226.7 | -10.2% |
+
+> With SAHI enabled, both training strategies converge to comparable detection counts. The full-frame model has a slight edge on large objects that span multiple slices.
+
+### Dense Pedestrian Crowd — SAHI vs No SAHI (full-640)
+
+<p align="center">
+  <img src="test_results/comparison_aerial_crowding_01_visdrone-full-640-sahi_vs_aerial_crowding_01_visdrone-full-640-no-sahi/01_total_objects_over_frames.png" width="80%" alt="Total objects per frame — aerial_crowding_01 SAHI vs No SAHI"/>
+</p>
+<p align="center">
+  <img src="test_results/comparison_aerial_crowding_01_visdrone-full-640-sahi_vs_aerial_crowding_01_visdrone-full-640-no-sahi/02_class_comparison_bar.png" width="80%" alt="Per-class comparison — aerial_crowding_01 SAHI vs No SAHI"/>
+</p>
+
+### Very Dense Crowd — SAHI vs No SAHI (full-640)
+
+<p align="center">
+  <img src="test_results/comparison_aerial_crowding_02_visdrone-full-640-sahi_vs_aerial_crowding_02_visdrone-full-640-no-sahi/01_total_objects_over_frames.png" width="80%" alt="Total objects per frame — aerial_crowding_02 SAHI vs No SAHI"/>
+</p>
+<p align="center">
+  <img src="test_results/comparison_aerial_crowding_02_visdrone-full-640-sahi_vs_aerial_crowding_02_visdrone-full-640-no-sahi/02_class_comparison_bar.png" width="80%" alt="Per-class comparison — aerial_crowding_02 SAHI vs No SAHI"/>
+</p>
+
+### Dense Vehicle Traffic — SAHI vs No SAHI (full-640)
+
+<p align="center">
+  <img src="test_results/comparison_aerial_vehicles_visdrone-full-640-sahi_vs_aerial_vehicles_visdrone-full-640-no-sahi/01_total_objects_over_frames.png" width="80%" alt="Total objects per frame — aerial_vehicles SAHI vs No SAHI"/>
+</p>
+<p align="center">
+  <img src="test_results/comparison_aerial_vehicles_visdrone-full-640-sahi_vs_aerial_vehicles_visdrone-full-640-no-sahi/02_class_comparison_bar.png" width="80%" alt="Per-class comparison — aerial_vehicles SAHI vs No SAHI"/>
+</p>
+
+See [Test Results](docs/TEST_RESULTS.md) for the complete evaluation with all model/video combinations.
+
+### Video Demos
+
+| Dense Pedestrian Crowd | Very Dense Crowd | Dense Vehicle Traffic |
+|:---:|:---:|:---:|
+| [![Dense Pedestrian Crowd](https://img.youtube.com/vi/_W_wBDvpzzY/hqdefault.jpg)](https://www.youtube.com/watch?v=_W_wBDvpzzY&list=PLJMGcwo73q30LtZaCw1VQ7UGPvGsmVlco) | [![Very Dense Crowd](https://img.youtube.com/vi/RFX8hIWscgw/hqdefault.jpg)](https://www.youtube.com/watch?v=RFX8hIWscgw&list=PLJMGcwo73q33YfssoIGBIMu51EPJBobxf) | [![Dense Vehicle Traffic](https://img.youtube.com/vi/3CxEp90Jy60/hqdefault.jpg)](https://www.youtube.com/watch?v=3CxEp90Jy60&list=PLJMGcwo73q33HWQfjHUD_exEVOUSnlbsA) |
+
+---
 
 ## Quick Start
 
@@ -93,24 +170,24 @@ deepstream-sahi/
 
 Adds intelligent TensorRT engine file naming and auto-discovery. Instead of rebuilding the `.engine` file on every pipeline start, it generates a standardized name encoding batch size, input dimensions, GPU model, compute capability, TensorRT version, and precision:
 
+```
+{model}_b{batch}_i{W}x{H}_{compute_cap}_{gpu}_{trt_ver}_{precision}.engine
+```
+
+See [`ENGINE_FILE_NAMING_FEATURE.md`](deepstream_source/libs/nvdsinfer/ENGINE_FILE_NAMING_FEATURE.md) for the full specification.
+
+> Forum discussion: [Smart Engine File Caching for nvdsinfer](https://forums.developer.nvidia.com/t/feature-contribution-smart-engine-file-caching-for-nvdsinfer/358537)
+
 ### nvdsinfer_yolo — YOLO Custom Bounding-Box Parser
+
 Custom parsing functions for YOLO models exported with **EfficientNMS_TRT** and **EfficientNMSX_TRT + ROIAlign_TRT** TensorRT plugins:
 
-## Key Results
+| Function | Model Type |
+|----------|-----------|
+| `NvDsInferYoloNMS` | Detection |
+| `NvDsInferYoloMask` | Instance Segmentation |
 
-With SAHI enabled on 2560x1440 aerial surveillance video:
-
-| Scenario | No SAHI | SAHI | Improvement |
-|----------|---------|------|-------------|
-| Dense pedestrian crowd (full-640) | 13.8 obj/frame | **84.2** obj/frame | **+510%** |
-| Dense pedestrian crowd (sliced-448) | 2.3 obj/frame | **85.3** obj/frame | **+3,619%** |
-| Very dense crowd (full-640) | 206.2 obj/frame | **664.7** obj/frame | **+222%** |
-| Dense vehicle traffic (full-640) | 92.3 obj/frame | **252.5** obj/frame | **+174%** |
-
-**Video Demos (SAHI vs No SAHI):**
-[Dense Pedestrian Crowd](https://www.youtube.com/watch?v=_W_wBDvpzzY&list=PLJMGcwo73q30LtZaCw1VQ7UGPvGsmVlco) | [Very Dense Crowd](https://www.youtube.com/watch?v=RFX8hIWscgw&list=PLJMGcwo73q33YfssoIGBIMu51EPJBobxf) | [Dense Vehicle Traffic](https://www.youtube.com/watch?v=3CxEp90Jy60&list=PLJMGcwo73q33HWQfjHUD_exEVOUSnlbsA)
-
-See [Test Results](docs/TEST_RESULTS.md) for the full evaluation.
+> Source: [levipereira/nvdsinfer_yolo](https://github.com/levipereira/nvdsinfer_yolo)
 
 ## SAHI is a Full-Pipeline Strategy
 
