@@ -25,16 +25,17 @@ SRCS:= gstnvsahipreprocess.cpp gstnvsahipreprocess_allocator.cpp \
 INCS:= $(wildcard *.h)
 LIB:=libnvdsgst_sahipreprocess.so
 
-NVDS_VERSION:=8.0
+DS_ROOT:=/opt/nvidia/deepstream/deepstream
+NVDS_VERSION:=$(shell basename $(shell readlink -f $(DS_ROOT)) | sed 's/deepstream-//')
 
-CFLAGS+= -fPIC -std=c++17 -Wall -Werror -DDS_VERSION=\"8.0.0\" \
+CFLAGS+= -fPIC -std=c++17 -Wall -Werror -DDS_VERSION=\"$(NVDS_VERSION).0\" \
 	 -I /usr/local/cuda-$(CUDA_VER)/include \
 	 -I include \
 	 -I ../../includes \
 	 -I ../gst-nvdspreprocess/include
 
-GST_INSTALL_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/gst-plugins/
-LIB_INSTALL_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/
+GST_INSTALL_DIR?=$(DS_ROOT)/lib/gst-plugins/
+LIB_INSTALL_DIR?=$(DS_ROOT)/lib/
 
 LIBS := -shared -Wl,-no-undefined \
 	-L/usr/local/cuda-$(CUDA_VER)/lib64/ -lcudart -ldl \

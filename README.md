@@ -1,7 +1,7 @@
 # DeepStream SAHI
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![DeepStream](https://img.shields.io/badge/NVIDIA-DeepStream%208.0-76B900?logo=nvidia)](https://developer.nvidia.com/deepstream-sdk)
+[![DeepStream](https://img.shields.io/badge/NVIDIA-DeepStream%208.x%20|%209.x-76B900?logo=nvidia)](https://developer.nvidia.com/deepstream-sdk)
 [![TensorRT](https://img.shields.io/badge/TensorRT-10.x-orange)](https://developer.nvidia.com/tensorrt)
 
 Native GStreamer plugins that integrate **SAHI** (Slicing Aided Hyper Inference) into NVIDIA DeepStream for real-time small-object detection in high-resolution video streams.
@@ -117,11 +117,15 @@ git clone https://github.com/levipereira/deepstream-sahi.git
 cd deepstream-sahi
 
 # Launch DeepStream container (see docs/INSTALL.md for full options)
+# DeepStream 9.x:
 docker run -it --name deepstream-sahi --net=host --gpus all \
     -v `pwd`:/apps/deepstream-sahi -w /apps/deepstream-sahi \
-    nvcr.io/nvidia/deepstream:8.0-triton-multiarch
+    nvcr.io/nvidia/deepstream:9.0-triton-multiarch
+# DeepStream 8.x:
+# docker run -it ... nvcr.io/nvidia/deepstream:8.0-triton-multiarch
 
 # Inside the container — single command installs everything:
+# The installer auto-detects the DeepStream version and adapts accordingly.
 /apps/deepstream-sahi/install.sh
 
 # Download test videos into python_test/videos/ (see link below)
@@ -168,18 +172,20 @@ deepstream-sahi/
 
 ## Prerequisites
 
-| Requirement | Tested Version |
-|-------------|---------------|
-| NVIDIA DeepStream SDK | 8.0 |
-| CUDA Toolkit | 12.x |
-| GStreamer | 1.x (ships with DeepStream) |
-| TensorRT | 10.x (ships with DeepStream) |
-| Python | 3.12 (with DeepStream Python Bindings) |
-| [Git LFS](https://git-lfs.com/) | 3.x (for cloning ONNX models) |
+| Requirement | DeepStream 8.x | DeepStream 9.x |
+|-------------|----------------|----------------|
+| NVIDIA DeepStream SDK | 8.0 | 9.0 |
+| CUDA Toolkit | 12.x | 13.x |
+| TensorRT | 10.x | 10.x / 11.x |
+| GStreamer | 1.x (ships with DeepStream) | 1.x (ships with DeepStream) |
+| Python Bindings | pyds 1.2.2 (pre-built) | built from source (`--build-bindings`) |
+| [Git LFS](https://git-lfs.com/) | 3.x | 3.x |
+
+> The `install.sh` script auto-detects the DeepStream version and adapts the build steps accordingly.
 
 ## Modified DeepStream Libraries
 
-### nvdsinfer — Smart Engine File Caching
+### nvdsinfer — Smart Engine File Caching (DS 8.x only)
 
 Adds intelligent TensorRT engine file naming and auto-discovery. Instead of rebuilding the `.engine` file on every pipeline start, it generates a standardized name encoding batch size, input dimensions, GPU model, compute capability, TensorRT version, and precision:
 
@@ -188,6 +194,8 @@ Adds intelligent TensorRT engine file naming and auto-discovery. Instead of rebu
 ```
 
 See [`ENGINE_FILE_NAMING_FEATURE.md`](deepstream_source/libs/nvdsinfer/ENGINE_FILE_NAMING_FEATURE.md) for the full specification.
+
+> **Note:** This modified library is only built and installed on DeepStream 8.x. On DeepStream 9.x the stock `nvdsinfer` is used.
 
 > Forum discussion: [Smart Engine File Caching for nvdsinfer](https://forums.developer.nvidia.com/t/feature-contribution-smart-engine-file-caching-for-nvdsinfer/358537)
 

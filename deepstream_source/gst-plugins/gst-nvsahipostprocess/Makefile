@@ -14,14 +14,14 @@ SRCS:= gstnvsahipostprocess.cpp
 INCS:= $(wildcard *.h)
 LIB:=libnvdsgst_sahipostprocess.so
 
-NVDS_VERSION:=8.0
+DS_ROOT:=/opt/nvidia/deepstream/deepstream
 
 CFLAGS+= -fPIC -std=c++17 -Wall -Werror \
 	 -I /usr/local/cuda-$(CUDA_VER)/include \
 	 -I ../../includes
 
-GST_INSTALL_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/gst-plugins/
-LIB_INSTALL_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/
+GST_INSTALL_DIR?=$(DS_ROOT)/lib/gst-plugins/
+LIB_INSTALL_DIR?=$(DS_ROOT)/lib/
 
 LIBS := -shared -Wl,-no-undefined \
 	-L$(LIB_INSTALL_DIR) -lnvdsgst_meta -lnvds_meta \

@@ -17,7 +17,10 @@ Options:
 Environment variables:
   DS_ROOT          DeepStream root (default: /opt/nvidia/deepstream/deepstream)
   CUDA_VER         CUDA version (default: auto-detected from nvcc)
-  PYDS_VERSION     DeepStream Python bindings version (default: 1.2.2)
+  PYDS_VERSION     DeepStream Python bindings version
+                   (default: 1.2.2 for DS 8.x, ignored for DS 9.x)
+
+Supported DeepStream versions: 8.x, 9.x
 EOF
     exit 0
 }
@@ -31,20 +34,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
-
-DS_ROOT="${DS_ROOT:-/opt/nvidia/deepstream/deepstream}"
-DS_SOURCES="${DS_ROOT}/sources"
-DS_LIB="${DS_ROOT}/lib"
-DS_GST="${DS_LIB}/gst-plugins"
-DS_PYTHON_APPS="${DS_SOURCES}/deepstream_python_apps"
-PYDS_VENV="${DS_PYTHON_APPS}/pyds"
-PYDS_VERSION="${PYDS_VERSION:-1.2.2}"
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_SOURCES="${SCRIPT_DIR}/deepstream_source"
-TEST_DIR="${SCRIPT_DIR}/python_test/deepstream-test-sahi"
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -55,6 +44,43 @@ info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 step()  { echo -e "\n${CYAN}══════════════════════════════════════════════════════════════${NC}"; echo -e "${CYAN} $*${NC}"; echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}\n"; }
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+
+DS_ROOT="${DS_ROOT:-/opt/nvidia/deepstream/deepstream}"
+DS_SOURCES="${DS_ROOT}/sources"
+DS_LIB="${DS_ROOT}/lib"
+DS_GST="${DS_LIB}/gst-plugins"
+DS_PYTHON_APPS="${DS_SOURCES}/deepstream_python_apps"
+PYDS_VENV="${DS_PYTHON_APPS}/pyds"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_SOURCES="${SCRIPT_DIR}/deepstream_source"
+TEST_DIR="${SCRIPT_DIR}/python_test/deepstream-test-sahi"
+
+# ── DeepStream version detection ─────────────────────────────────────────────
+
+if command -v deepstream-app &>/dev/null; then
+    DS_VERSION=$(deepstream-app --version 2>&1 | grep -oP 'DeepStreamSDK \K[0-9]+\.[0-9]+' || true)
+fi
+
+if [[ -z "${DS_VERSION:-}" ]]; then
+    DS_VERSION=$(basename "$(readlink -f "$DS_ROOT")" | grep -oP '[0-9]+\.[0-9]+' || true)
+fi
+
+[[ -n "${DS_VERSION:-}" ]] || error "Could not detect DeepStream version"
+
+DS_MAJOR=$(echo "$DS_VERSION" | cut -d. -f1)
+
+if [[ "$DS_MAJOR" -ne 8 && "$DS_MAJOR" -ne 9 ]]; then
+    error "Unsupported DeepStream version ${DS_VERSION}. Only 8.x and 9.x are supported."
+fi
+
+info "Detected DeepStream ${DS_VERSION} (major=${DS_MAJOR})"
+
+if [[ "$DS_MAJOR" -eq 8 ]]; then
+    PYDS_VERSION="${PYDS_VERSION:-1.2.2}"
+fi
 
 # ── Prerequisites ─────────────────────────────────────────────────────────────
 
@@ -100,18 +126,34 @@ fi
 # ══════════════════════════════════════════════════════════════════════════════
 
 if ! $PLUGINS_ONLY; then
-    step "Step 2/4 — Installing DeepStream Python bindings (pyds ${PYDS_VERSION})"
-
     PYTHON_INSTALL="${DS_ROOT}/user_deepstream_python_apps_install.sh"
-    if [[ -d "$DS_PYTHON_APPS" ]]; then
-        info "deepstream_python_apps already exists at ${DS_PYTHON_APPS}, skipping"
-        info "(${PYTHON_INSTALL} would fail if this directory already exists)"
-    else
-        if [[ -f "$PYTHON_INSTALL" ]]; then
-            info "Running ${PYTHON_INSTALL} --version ${PYDS_VERSION}..."
-            bash "$PYTHON_INSTALL" --version "$PYDS_VERSION"
+
+    if [[ "$DS_MAJOR" -eq 8 ]]; then
+        step "Step 2/4 — Installing DeepStream Python bindings (pyds ${PYDS_VERSION})"
+
+        if [[ -d "$DS_PYTHON_APPS" ]]; then
+            info "deepstream_python_apps already exists at ${DS_PYTHON_APPS}, skipping"
+            info "(${PYTHON_INSTALL} would fail if this directory already exists)"
         else
-            warn "user_deepstream_python_apps_install.sh not found at ${PYTHON_INSTALL}, skipping"
+            if [[ -f "$PYTHON_INSTALL" ]]; then
+                info "Running ${PYTHON_INSTALL} --version ${PYDS_VERSION}..."
+                bash "$PYTHON_INSTALL" --version "$PYDS_VERSION"
+            else
+                warn "user_deepstream_python_apps_install.sh not found at ${PYTHON_INSTALL}, skipping"
+            fi
+        fi
+    else
+        step "Step 2/4 — Installing DeepStream Python bindings (DS ${DS_VERSION}, build from source)"
+
+        if [[ -d "$DS_PYTHON_APPS" ]]; then
+            info "deepstream_python_apps already exists at ${DS_PYTHON_APPS}, skipping"
+        else
+            if [[ -f "$PYTHON_INSTALL" ]]; then
+                info "Running ${PYTHON_INSTALL} --build-bindings -r master..."
+                bash "$PYTHON_INSTALL" --build-bindings -r master
+            else
+                warn "user_deepstream_python_apps_install.sh not found at ${PYTHON_INSTALL}, skipping"
+            fi
         fi
     fi
 fi
@@ -134,7 +176,9 @@ backup_if_exists() {
     fi
 }
 
-backup_if_exists "${DS_SOURCES}/libs/nvdsinfer"
+if [[ "$DS_MAJOR" -eq 8 ]]; then
+    backup_if_exists "${DS_SOURCES}/libs/nvdsinfer"
+fi
 backup_if_exists "${DS_SOURCES}/libs/nvdsinfer_yolo"
 
 info "Copying SAHI plugins to ${DS_SOURCES}/gst-plugins/"
@@ -142,13 +186,19 @@ cp -r "${REPO_SOURCES}/gst-plugins/gst-nvsahipreprocess"  "${DS_SOURCES}/gst-plu
 cp -r "${REPO_SOURCES}/gst-plugins/gst-nvsahipostprocess" "${DS_SOURCES}/gst-plugins/"
 
 info "Copying modified libs to ${DS_SOURCES}/libs/"
-cp -r "${REPO_SOURCES}/libs/nvdsinfer"      "${DS_SOURCES}/libs/"
+if [[ "$DS_MAJOR" -eq 8 ]]; then
+    cp -r "${REPO_SOURCES}/libs/nvdsinfer"      "${DS_SOURCES}/libs/"
+fi
 cp -r "${REPO_SOURCES}/libs/nvdsinfer_yolo"  "${DS_SOURCES}/libs/"
 
-info "Building nvdsinfer..."
-make -C "${DS_SOURCES}/libs/nvdsinfer" clean
-make -C "${DS_SOURCES}/libs/nvdsinfer" -j"$(nproc)" CUDA_VER="${CUDA_VER}"
-make -C "${DS_SOURCES}/libs/nvdsinfer" install CUDA_VER="${CUDA_VER}"
+if [[ "$DS_MAJOR" -eq 8 ]]; then
+    info "Building nvdsinfer... (DS 8.x only)"
+    make -C "${DS_SOURCES}/libs/nvdsinfer" clean
+    make -C "${DS_SOURCES}/libs/nvdsinfer" -j"$(nproc)" CUDA_VER="${CUDA_VER}"
+    make -C "${DS_SOURCES}/libs/nvdsinfer" install CUDA_VER="${CUDA_VER}"
+else
+    info "Skipping nvdsinfer build (not needed on DS ${DS_VERSION})"
+fi
 
 info "Building nvdsinfer_yolo..."
 make -C "${DS_SOURCES}/libs/nvdsinfer_yolo" clean

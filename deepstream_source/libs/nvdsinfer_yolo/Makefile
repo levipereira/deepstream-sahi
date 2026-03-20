@@ -33,7 +33,7 @@ CFLAGS += -I/opt/nvidia/deepstream/deepstream/sources/includes \
 CUDA_MAJOR_VER := $(shell echo $(CUDA_VER) | cut -d. -f1)
 CUDA_MINOR_VER := $(shell echo $(CUDA_VER) | cut -d. -f2)
 
-ifeq ($(shell [ $(CUDA_MAJOR_VER) -ge 12 ] && [ $(CUDA_MINOR_VER) -ge 2 ] && echo true), true)
+ifeq ($(shell [ $(CUDA_MAJOR_VER) -gt 12 ] && echo true || { [ $(CUDA_MAJOR_VER) -eq 12 ] && [ $(CUDA_MINOR_VER) -ge 2 ] && echo true; }), true)
     LIBS := -lnvinfer
 else
     LIBS := -lnvinfer -lnvparsers

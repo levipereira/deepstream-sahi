@@ -11,11 +11,17 @@ cd deepstream-sahi
 
 ## 2. Launch the DeepStream Container
 
-Choose the command that matches your environment.
+Choose the command that matches your environment. Both DeepStream 8.x and 9.x are supported — the installer auto-detects the version.
+
+| DeepStream | Container Image |
+|------------|----------------|
+| 9.x | `nvcr.io/nvidia/deepstream:9.0-triton-multiarch` |
+| 8.x | `nvcr.io/nvidia/deepstream:8.0-triton-multiarch` |
 
 ### WSL2 (Windows Subsystem for Linux)
 
 ```bash
+# Replace the image tag with the desired DeepStream version
 docker run \
     -it \
     --name deepstream-sahi \
@@ -25,7 +31,7 @@ docker run \
     -w /apps/deepstream-sahi \
     -e CUDA_CACHE_DISABLE=0 \
     --device /dev/snd \
-    nvcr.io/nvidia/deepstream:8.0-triton-multiarch
+    nvcr.io/nvidia/deepstream:9.0-triton-multiarch
 ```
 
 > **Display output on WSL2:** The pipeline uses `fakesink` by default, so display is not required. If you want visual output with `--display`, there is a [known issue](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_WSL2_FAQ.html#while-using-pipelines-involving-nveglglessink-or-any-other-display-sinks-black-screen-is-coming-with-mesa-error-failed-to-attach-to-x11-shm-on-terminal) where `nveglglessink` shows a black screen on Ubuntu 24-based Docker on WSL2. The workaround is X11 forwarding over SSH as described in [Enabling Display on WSL2](#enabling-display-on-wsl2). Without a display server, the pipeline automatically falls back to `fakesink` with a warning.
@@ -44,7 +50,7 @@ docker run \
     -v /tmp/.X11-unix/:/tmp/.X11-unix \
     -v `pwd`:/apps/deepstream-sahi \
     -w /apps/deepstream-sahi \
-    nvcr.io/nvidia/deepstream:8.0-triton-multiarch
+    nvcr.io/nvidia/deepstream:9.0-triton-multiarch
 ```
 
 > **Re-attaching to an existing container:**
@@ -61,13 +67,13 @@ A single command installs everything:
 /apps/deepstream-sahi/install.sh
 ```
 
-The script performs four steps automatically:
+The script auto-detects the DeepStream version and performs four steps:
 
 | Step | What it does |
 |------|-------------|
 | **1/4** | Installs DeepStream additional components (`user_additional_install.sh`) |
-| **2/4** | Installs DeepStream Python bindings and creates the `pyds` virtualenv (`user_deepstream_python_apps_install.sh`) |
-| **3/4** | Backs up original libs, copies sources, builds and installs all plugins and libraries |
+| **2/4** | Installs DeepStream Python bindings — **DS 8.x:** pre-built pyds 1.2.2 via `--version`; **DS 9.x:** built from source via `--build-bindings -r master` |
+| **3/4** | Backs up original libs, copies sources, builds and installs plugins. **DS 8.x:** also builds the modified `nvdsinfer`; **DS 9.x:** uses the stock `nvdsinfer` |
 | **4/4** | Installs Python test dependencies (`pandas`, `matplotlib`, `numpy`) into the `pyds` virtualenv |
 
 Steps that have already been completed are detected and skipped automatically.
@@ -96,8 +102,8 @@ This runs only step 3 (build + install), skipping steps 1, 2, and 4.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DS_ROOT` | `/opt/nvidia/deepstream/deepstream` | DeepStream installation root |
-| `CUDA_VER` | auto-detected from `nvcc` | CUDA version (e.g. `12.6`) |
-| `PYDS_VERSION` | `1.2.2` | DeepStream Python bindings version |
+| `CUDA_VER` | auto-detected from `nvcc` | CUDA version (e.g. `12.6`, `13.1`) |
+| `PYDS_VERSION` | `1.2.2` (DS 8.x only) | DeepStream Python bindings version. Ignored on DS 9.x (bindings are built from source) |
 
 ## 4. Download Test Videos
 
