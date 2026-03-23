@@ -230,15 +230,38 @@ Measures how much of the smaller box is contained within the larger one. Handles
 
 ### Debug Statistics
 
-Per-frame merge statistics are emitted via `GST_DEBUG` at the `LOG` level:
+Per-frame merge statistics are emitted at the `LOG` level (6). See [Debug & Latency Profiling](#debug--latency-profiling) above for usage.
+
+### Debug & Latency Profiling
+
+Uses the standard GStreamer debug system via `GST_DEBUG`:
+
+| Level | Command | Output |
+|-------|---------|--------|
+| INFO (4) | `GST_DEBUG=nvsahipostprocess:4` | PERF latency summary every ~1s |
+| DEBUG (5) | `GST_DEBUG=nvsahipostprocess:5` | + element init, config, transform_ip per buffer |
+| LOG (6) | `GST_DEBUG=nvsahipostprocess:6` | + per-frame NMM detail (dets, suppressed, merged, surviving) |
+
+Example — latency profiling only:
+
+```bash
+GST_DEBUG=nvsahipostprocess:4 python3 deepstream_test_sahi.py --model visdrone-full-640 --no-display -i video.mp4
+```
 
 ```
+INFO  nvsahipostprocess ... PERF 1.0s: 30 batches, 30 frames | avg 0.28 ms/batch, 0.28 ms/frame | total 8.5 ms
+```
+
+Example — full per-frame detail:
+
+```bash
 GST_DEBUG=nvsahipostprocess:6 gst-launch-1.0 ...
 ```
 
-Output format:
 ```
-nvsahipostprocess: frame 42: 450 dets, 312 suppressed, 85 merged, 138 surviving
+LOG   nvsahipostprocess ... frame 42: collected 450 dets (gie_filter_all=1)
+LOG   nvsahipostprocess ... frame 42: grid built 1920x1080, 450 rects
+LOG   nvsahipostprocess ... frame 42: 450 dets, 200 suppressed, 120 merged, 250 surviving
 ```
 
 ### Performance

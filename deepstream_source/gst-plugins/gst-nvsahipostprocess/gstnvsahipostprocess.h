@@ -104,6 +104,12 @@ struct _GstNvSahiPostProcess
   guint             merge_strategy;
   gint              max_detections;
   gboolean          drop_mask_on_merge;
+
+  /* latency profiling (GST_DEBUG=nvsahipostprocess:4) */
+  gdouble           perf_accum_ms;
+  guint             perf_batch_count;
+  guint             perf_frame_count;
+  gint64            perf_last_print_us;
 };
 
 struct _GstNvSahiPostProcessClass

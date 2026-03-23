@@ -1,24 +1,8 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2026 Levi Pereira <levi.pereira@gmail.com>
+/* SPDX-FileCopyrightText: Copyright (c) 2026 Levi Pereira <levi.pereira@gmail.com>
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
  * DeepStream SAHI Post-Process Plugin (v1.2)
- *
- * Sits between nvinfer and nvtracker. Merges duplicate detections produced by
- * sliced inference using an improved GreedyNMM algorithm.
- *
+ * Merges duplicate detections from sliced inference via GreedyNMM.
  * Pipeline: nvinfer → queue → nvsahipostprocess → nvtracker → nvdsosd
  */
 
@@ -26,6 +10,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <numeric>
+#include <chrono>
 #include <vector>
 #include <unordered_map>
 #include "greedy_nmm.h"
@@ -61,28 +46,19 @@ enum
 #define DEFAULT_MAX_DETECTIONS      -1
 #define DEFAULT_DROP_MASK_ON_MERGE  FALSE
 
-#define GST_CAPS_FEATURE_MEMORY_NVMM "memory:NVMM"
-static GstStaticPadTemplate gst_nvsahipostprocess_sink_template =
-GST_STATIC_PAD_TEMPLATE ("sink", GST_PAD_SINK, GST_PAD_ALWAYS,
-    GST_STATIC_CAPS (GST_VIDEO_CAPS_MAKE_WITH_FEATURES
-        (GST_CAPS_FEATURE_MEMORY_NVMM, "{ NV12, RGBA, I420 }")));
-
-static GstStaticPadTemplate gst_nvsahipostprocess_src_template =
-GST_STATIC_PAD_TEMPLATE ("src", GST_PAD_SRC, GST_PAD_ALWAYS,
-    GST_STATIC_CAPS (GST_VIDEO_CAPS_MAKE_WITH_FEATURES
-        (GST_CAPS_FEATURE_MEMORY_NVMM, "{ NV12, RGBA, I420 }")));
+#define NVMM_CAPS GST_VIDEO_CAPS_MAKE_WITH_FEATURES ("memory:NVMM", "{ NV12, RGBA, I420 }")
+static GstStaticPadTemplate sink_tmpl = GST_STATIC_PAD_TEMPLATE (
+    "sink", GST_PAD_SINK, GST_PAD_ALWAYS, GST_STATIC_CAPS (NVMM_CAPS));
+static GstStaticPadTemplate src_tmpl = GST_STATIC_PAD_TEMPLATE (
+    "src", GST_PAD_SRC, GST_PAD_ALWAYS, GST_STATIC_CAPS (NVMM_CAPS));
 
 #define gst_nvsahipostprocess_parent_class parent_class
-G_DEFINE_TYPE (GstNvSahiPostProcess, gst_nvsahipostprocess,
-    GST_TYPE_BASE_TRANSFORM);
+G_DEFINE_TYPE (GstNvSahiPostProcess, gst_nvsahipostprocess, GST_TYPE_BASE_TRANSFORM);
 
-static void gst_nvsahipostprocess_set_property (GObject *, guint,
-    const GValue *, GParamSpec *);
-static void gst_nvsahipostprocess_get_property (GObject *, guint,
-    GValue *, GParamSpec *);
+static void gst_nvsahipostprocess_set_property (GObject *, guint, const GValue *, GParamSpec *);
+static void gst_nvsahipostprocess_get_property (GObject *, guint, GValue *, GParamSpec *);
 static void gst_nvsahipostprocess_finalize (GObject *);
-static GstFlowReturn gst_nvsahipostprocess_transform_ip (
-    GstBaseTransform *, GstBuffer *);
+static GstFlowReturn gst_nvsahipostprocess_transform_ip (GstBaseTransform *, GstBuffer *);
 
 static void
 parse_gie_ids (GstNvSahiPostProcess *self, const gchar *str)
@@ -153,6 +129,9 @@ process_frame (GstNvSahiPostProcess *self,
     dets.push_back (d);
   }
 
+  GST_LOG_OBJECT (self, "frame %u: collected %zu dets (gie_filter_all=%d)",
+      frame_meta->frame_num, dets.size (), self->gie_filter_all);
+
   if (dets.size () <= 1)
     return;
 
@@ -189,6 +168,8 @@ process_frame (GstNvSahiPostProcess *self,
   for (guint i = 0; i < n; i++)
     rects[i] = {dets[i].left, dets[i].top, dets[i].right, dets[i].bottom};
   grid.build (rects, n, fw, fh);
+  GST_LOG_OBJECT (self, "frame %u: grid built %.0fx%.0f, %u rects",
+      frame_meta->frame_num, fw, fh, n);
 
   /* Execute NMM (per-class or class-agnostic) */
   if (!agnostic) {
@@ -299,19 +280,50 @@ gst_nvsahipostprocess_transform_ip (GstBaseTransform * btrans,
 {
   GstNvSahiPostProcess *self = GST_NVSAHIPOSTPROCESS (btrans);
 
+  GST_DEBUG_OBJECT (self, "transform_ip: buffer %p", inbuf);
+
   NvDsBatchMeta *batch_meta = gst_buffer_get_nvds_batch_meta (inbuf);
-  if (!batch_meta)
+  if (!batch_meta) {
+    GST_DEBUG_OBJECT (self, "transform_ip: no batch_meta, passthrough");
     return GST_FLOW_OK;
+  }
 
   std::vector<NvDsFrameMeta *> frames;
   for (NvDsMetaList *l = batch_meta->frame_meta_list; l; l = l->next)
     frames.push_back ((NvDsFrameMeta *) l->data);
+
+  GST_DEBUG_OBJECT (self, "transform_ip: %zu frames in batch",
+      frames.size ());
+
+  auto t0 = std::chrono::steady_clock::now ();
 
 #ifdef _OPENMP
   #pragma omp parallel for schedule(dynamic) if(frames.size() > 1)
 #endif
   for (size_t f = 0; f < frames.size (); f++)
     process_frame (self, batch_meta, frames[f]);
+
+  if (G_UNLIKELY (GST_LEVEL_INFO <=
+      gst_debug_category_get_threshold (GST_CAT_DEFAULT))) {
+    auto t1 = std::chrono::steady_clock::now ();
+    self->perf_accum_ms +=
+        std::chrono::duration<gdouble, std::milli> (t1 - t0).count ();
+    self->perf_batch_count++;
+    self->perf_frame_count += frames.size ();
+    gint64 now = g_get_monotonic_time ();
+    if (now - self->perf_last_print_us >= 1000000) {
+      GST_INFO_OBJECT (self,
+          "PERF %.1fs: %u batches, %u frames | avg %.3f ms/batch, "
+          "%.3f ms/frame | total %.1f ms",
+          (now - self->perf_last_print_us) / 1e6,
+          self->perf_batch_count, self->perf_frame_count,
+          self->perf_accum_ms / self->perf_batch_count,
+          self->perf_accum_ms / self->perf_frame_count,
+          self->perf_accum_ms);
+      self->perf_accum_ms = 0; self->perf_batch_count = 0;
+      self->perf_frame_count = 0; self->perf_last_print_us = now;
+    }
+  }
 
   return GST_FLOW_OK;
 }
@@ -330,67 +342,37 @@ gst_nvsahipostprocess_class_init (GstNvSahiPostProcessClass * klass)
   go->finalize     = GST_DEBUG_FUNCPTR (gst_nvsahipostprocess_finalize);
   bt->transform_ip = GST_DEBUG_FUNCPTR (gst_nvsahipostprocess_transform_ip);
 
+#define RW (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)
   g_object_class_install_property (go, PROP_GIE_IDS,
-      g_param_spec_string ("gie-ids", "GIE Unique IDs",
-          "Semicolon-separated list of GIE unique-component-ids to process. "
-          "\"-1\" or empty = all GIEs. Example: \"1;3;5\".",
-          DEFAULT_GIE_IDS,
-          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
-
+      g_param_spec_string ("gie-ids", "GIE IDs",
+          "\"-1\"=all, or semicolon-separated ids (\"1;3;5\")", DEFAULT_GIE_IDS, RW));
   g_object_class_install_property (go, PROP_MATCH_METRIC,
       g_param_spec_uint ("match-metric", "Match Metric",
-          "Overlap metric: 0=IoU, 1=IoS. IoS recommended for slice-boundary.",
-          0, 1, DEFAULT_MATCH_METRIC,
-          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
-
+          "0=IoU, 1=IoS (recommended)", 0, 1, DEFAULT_MATCH_METRIC, RW));
   g_object_class_install_property (go, PROP_MATCH_THRESHOLD,
       g_param_spec_float ("match-threshold", "Match Threshold",
-          "Overlap threshold for considering detections as duplicates.",
-          0.0f, 1.0f, DEFAULT_MATCH_THRESHOLD,
-          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
-
+          "Overlap threshold for duplicate detection", 0.0f, 1.0f, DEFAULT_MATCH_THRESHOLD, RW));
   g_object_class_install_property (go, PROP_CLASS_AGNOSTIC,
       g_param_spec_boolean ("class-agnostic", "Class Agnostic",
-          "Match detections across different class IDs.",
-          DEFAULT_CLASS_AGNOSTIC,
-          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
-
+          "Match across different class IDs", DEFAULT_CLASS_AGNOSTIC, RW));
   g_object_class_install_property (go, PROP_ENABLE_MERGE,
       g_param_spec_boolean ("enable-merge", "Enable Merge",
-          "Merge suppressed boxes into survivors (GreedyNMM). "
-          "FALSE = standard NMS (suppress only).",
-          DEFAULT_ENABLE_MERGE,
-          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
-
+          "Merge suppressed boxes (NMM). FALSE=NMS suppress-only", DEFAULT_ENABLE_MERGE, RW));
   g_object_class_install_property (go, PROP_TWO_PHASE_NMM,
       g_param_spec_boolean ("two-phase-nmm", "Two-Phase NMM",
-          "Two-phase GreedyNMM: phase 1 uses original bboxes for candidate "
-          "selection, phase 2 re-checks against expanded bboxes.",
-          DEFAULT_TWO_PHASE_NMM,
-          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
-
+          "Phase 1: original bboxes, phase 2: re-check expanded", DEFAULT_TWO_PHASE_NMM, RW));
   g_object_class_install_property (go, PROP_MERGE_STRATEGY,
       g_param_spec_uint ("merge-strategy", "Merge Strategy",
-          "0=union (default), 1=weighted, 2=largest.",
-          0, 2, DEFAULT_MERGE_STRATEGY,
-          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
-
+          "0=union, 1=weighted, 2=largest", 0, 2, DEFAULT_MERGE_STRATEGY, RW));
   g_object_class_install_property (go, PROP_MAX_DETECTIONS,
       g_param_spec_int ("max-detections", "Max Detections",
-          "Maximum detections per frame after merge (-1 = unlimited).",
-          -1, G_MAXINT, DEFAULT_MAX_DETECTIONS,
-          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
-
+          "Max surviving per frame (-1=unlimited)", -1, G_MAXINT, DEFAULT_MAX_DETECTIONS, RW));
   g_object_class_install_property (go, PROP_DROP_MASK_ON_MERGE,
       g_param_spec_boolean ("drop-mask-on-merge", "Drop Mask on Merge",
-          "Clear segmentation mask on merge. FALSE = composite via max.",
-          DEFAULT_DROP_MASK_ON_MERGE,
-          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
+          "Clear mask on merge. FALSE=composite via max", DEFAULT_DROP_MASK_ON_MERGE, RW));
 
-  gst_element_class_add_pad_template (ge,
-      gst_static_pad_template_get (&gst_nvsahipostprocess_src_template));
-  gst_element_class_add_pad_template (ge,
-      gst_static_pad_template_get (&gst_nvsahipostprocess_sink_template));
+  gst_element_class_add_pad_template (ge, gst_static_pad_template_get (&src_tmpl));
+  gst_element_class_add_pad_template (ge, gst_static_pad_template_get (&sink_tmpl));
 
   gst_element_class_set_details_simple (ge,
       "SAHI Post-Process (GreedyNMM v1.2)",
@@ -405,7 +387,9 @@ gst_nvsahipostprocess_init (GstNvSahiPostProcess * self)
 {
   GstBaseTransform *bt = GST_BASE_TRANSFORM (self);
   gst_base_transform_set_in_place (bt, TRUE);
-  gst_base_transform_set_passthrough (bt, TRUE);
+  gst_base_transform_set_passthrough (bt, FALSE);
+
+  GST_DEBUG_OBJECT (self, "init: in_place=TRUE passthrough=FALSE");
 
   self->gie_ids_str         = nullptr;
   self->gie_ids             = new std::unordered_set<gint> ();
@@ -419,6 +403,18 @@ gst_nvsahipostprocess_init (GstNvSahiPostProcess * self)
   self->merge_strategy      = DEFAULT_MERGE_STRATEGY;
   self->max_detections      = DEFAULT_MAX_DETECTIONS;
   self->drop_mask_on_merge  = DEFAULT_DROP_MASK_ON_MERGE;
+
+  self->perf_accum_ms      = 0;
+  self->perf_batch_count   = 0;
+  self->perf_frame_count   = 0;
+  self->perf_last_print_us = g_get_monotonic_time ();
+
+  GST_DEBUG_OBJECT (self,
+      "config: gie_ids=%s metric=%u threshold=%.2f agnostic=%d merge=%d "
+      "two_phase=%d strategy=%u max_det=%d drop_mask=%d",
+      self->gie_ids_str, self->match_metric, self->match_threshold,
+      self->class_agnostic, self->enable_merge, self->two_phase_nmm,
+      self->merge_strategy, self->max_detections, self->drop_mask_on_merge);
 }
 
 /* ── Cleanup ─────────────────────────────────────────────────────────────── */
