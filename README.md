@@ -83,6 +83,8 @@ For container variants, display notes, rebuild mode, and environment details, se
 | [Plugin Reference](docs/PLUGINS.md) | plugin properties and behavior |
 | [Training Guide](docs/TRAINING.md) | training workflow for sliced models |
 | [Test Results](docs/TEST_RESULTS.md) | evaluation data and charts |
+| [Parameter Tests — Vehicles](docs/PARAMETER_TESTS.md) | postprocess parameter validation (moderate density) |
+| [Parameter Tests — Dense Crowd](docs/PARAMETER_TESTS_CROWDING.md) | postprocess parameter validation (high density) |
 
 ## Repository Structure
 
@@ -102,6 +104,8 @@ deepstream-sahi/
 │   └── videos/
 ├── train_yolov9_visdrone/
 ├── test_results/
+├── scripts/
+│   └── test_postprocess_params.sh
 ├── docs/
 ├── install.sh
 └── README.md
@@ -216,6 +220,38 @@ For the complete benchmark, see `docs/TEST_RESULTS.md`.
 The repository includes both full-frame and slice-oriented training artifacts. The current results indicate that SAHI allows smaller model inputs to recover object scale on high-resolution video, which can help balance accuracy and throughput.
 
 Training details are documented in `docs/TRAINING.md`.
+
+## Plugin Parameter Validation
+
+All `nvsahipostprocess` parameters have been validated with automated tests across two
+density regimes:
+
+| Video | Detections/frame | Scene | Tests |
+|-------|-----------------|-------|-------|
+| `aerial_vehicles.mp4` | ~311 | Moderate — vehicles | 21/21 passed |
+| `aerial_crowding_02.mp4` | ~1312 | Very dense — pedestrians + motorcycles | 21/21 passed |
+
+Key findings:
+
+- **match-metric**: IoS suppresses more duplicates than IoU (recommended for SAHI)
+- **match-threshold**: monotonic — lower threshold → more aggressive suppression
+- **class-agnostic=true**: +36% more suppression on vehicles, +13% on dense crowds
+- **enable-merge=false**: reliably produces zero merges (pure NMS mode)
+- **max-detections**: exact cap — removes 789 extra detections in dense scenes
+- **PERF profiling**: `GST_DEBUG=nvsahipostprocess:4` shows latency summary every ~1s
+
+Run the automated test suite:
+
+```bash
+# Default video (aerial_vehicles.mp4)
+scripts/test_postprocess_params.sh
+
+# Custom video
+scripts/test_postprocess_params.sh python_test/videos/aerial_crowding_02.mp4
+```
+
+Full results: [Parameter Tests — Vehicles](docs/PARAMETER_TESTS.md) |
+[Parameter Tests — Dense Crowd](docs/PARAMETER_TESTS_CROWDING.md)
 
 ## Limitations
 
