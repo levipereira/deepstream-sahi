@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: LicenseRef-NvidiaDeepStreamEULA
 # nvsahipostprocess — parameter validation test suite
 #
 # Runs each postprocess parameter variation against a real DeepStream SAHI pipeline

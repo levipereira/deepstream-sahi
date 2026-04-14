@@ -73,14 +73,14 @@ The script auto-detects the DeepStream version and performs four steps:
 |------|-------------|
 | **1/4** | Installs DeepStream additional components (`user_additional_install.sh`) |
 | **2/4** | Installs DeepStream Python bindings — **DS 8.x:** pre-built pyds 1.2.2 via `--version`; **DS 9.x:** built from source via `--build-bindings -r master` |
-| **3/4** | Backs up original libs, copies sources, builds and installs plugins. **DS 8.x:** also builds the modified `nvdsinfer`; **DS 9.x:** uses the stock `nvdsinfer` |
+| **3/4** | Copies `nvdsinfer_yolo` and SAHI plugin sources, then builds and installs `libnvds_infer_yolo.so`, `gst-nvsahipreprocess`, and `gst-nvsahipostprocess`. Does **not** replace or rebuild `nvdsinfer` (`libnvds_infer.so` stays the SDK build) |
 | **4/4** | Installs Python test dependencies (`pandas`, `matplotlib`, `numpy`) into the `pyds` virtualenv |
 
 Steps that have already been completed are detected and skipped automatically.
 
 ### Plugins-Only Mode
 
-If the DeepStream dependencies and Python bindings are already set up and you only need to rebuild the SAHI plugins and modified libraries (e.g. after code changes), use:
+If the DeepStream dependencies and Python bindings are already set up and you only need to rebuild the SAHI plugins and `nvdsinfer_yolo` (e.g. after code changes), use:
 
 ```bash
 /apps/deepstream-sahi/install.sh --plugins-only
@@ -92,10 +92,11 @@ This runs only step 3 (build + install), skipping steps 1, 2, and 4.
 
 | Library | Description |
 |---------|-------------|
-| `libnvds_infer.so` | Modified nvdsinfer with smart engine caching |
-| `libnvds_infer_yolo.so` | YOLO custom bounding-box parser |
 | `libnvdsgst_sahipreprocess.so` | SAHI dynamic-slice pre-process plugin |
 | `libnvdsgst_sahipostprocess.so` | SAHI GreedyNMM post-process plugin |
+| `libnvds_infer_yolo.so` | **Required** custom parser (built from `deepstream_source/libs/nvdsinfer_yolo`) — decodes **EfficientNMS** TRT output for the bundled YOLO models; not optional for those configs |
+
+TensorRT core inference uses the DeepStream SDK’s `libnvds_infer.so` and `nvinfer` (not replaced by this project). The `nvdsinfer_yolo` sources are a custom EfficientNMS parser (not NVIDIA’s stock sample); licensing follows the [DeepStream EULA](https://developer.nvidia.com/deepstream-eula) — see `LICENSE` in the repository root.
 
 ### Environment Variables
 
@@ -182,19 +183,14 @@ From this SSH session, display sinks will work correctly through X11 forwarding.
 
 > **Note:** If you don't need display output, you can skip this section entirely. The pipeline uses `fakesink` by default — display is only enabled with the explicit `--display` flag. Alternatively, use `--output-mp4` to save results to a file.
 
-## Restoring Original Libraries
+## Reverting to DeepStream’s stock `nvdsinfer_yolo` (advanced)
 
-`install.sh` backs up the original directories before overwriting. To restore:
+The **default** install keeps this repository’s parser, which you need for **EfficientNMS**-based models. `install.sh` backs up `${DS_SOURCES}/libs/nvdsinfer_yolo` once (to `nvdsinfer_yolo.bak`) before copying the project sources. Only if you intentionally want NVIDIA’s stock sample under `sources/libs/` (e.g. different model exports) restore and rebuild:
 
 ```bash
 DS=/opt/nvidia/deepstream/deepstream/sources/libs
-mv "$DS/nvdsinfer.bak" "$DS/nvdsinfer"
 mv "$DS/nvdsinfer_yolo.bak" "$DS/nvdsinfer_yolo"
+make -C "$DS/nvdsinfer_yolo" clean && make -C "$DS/nvdsinfer_yolo" -j"$(nproc)" CUDA_VER="$CUDA_VER" install
 ```
 
-Then rebuild:
-
-```bash
-make -C "$DS/nvdsinfer" clean && make -C "$DS/nvdsinfer" -j$(nproc) && make -C "$DS/nvdsinfer" install
-make -C "$DS/nvdsinfer_yolo" clean && make -C "$DS/nvdsinfer_yolo" -j$(nproc) && make -C "$DS/nvdsinfer_yolo" install
-```
+This project does not modify `nvdsinfer` (`libnvds_infer.so`). If an older installer left `nvdsinfer.bak`, restore from backup or reinstall DeepStream sources from NVIDIA if needed.

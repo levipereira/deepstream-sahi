@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: Copyright (c) 2026 Levi Pereira <levi.pereira@gmail.com>
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: LicenseRef-NvidiaDeepStreamEULA
  *
  * GreedyNMM algorithm core: overlap computation, merge helpers, deterministic
  * sorting, and the two-phase NMM loop with spatial grid acceleration.

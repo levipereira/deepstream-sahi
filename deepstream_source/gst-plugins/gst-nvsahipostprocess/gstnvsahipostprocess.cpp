@@ -1,5 +1,7 @@
 /* SPDX-FileCopyrightText: Copyright (c) 2026 Levi Pereira <levi.pereira@gmail.com>
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: LicenseRef-NvidiaDeepStreamEULA
+ *
+ * Subject to https://developer.nvidia.com/deepstream-eula
  *
  * DeepStream SAHI Post-Process Plugin (v1.2)
  * Merges duplicate detections from sliced inference via GreedyNMM.

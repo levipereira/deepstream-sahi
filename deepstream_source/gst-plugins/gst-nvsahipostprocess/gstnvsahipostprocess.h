@@ -1,18 +1,9 @@
 /*
  * SPDX-FileCopyrightText: Copyright (c) 2026 Levi Pereira <levi.pereira@gmail.com>
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: LicenseRef-NvidiaDeepStreamEULA
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Subject to the NVIDIA DeepStream SDK License Agreement:
+ * https://developer.nvidia.com/deepstream-eula
  *
  * DeepStream SAHI Post-Process Plugin
  * Merges duplicate detections from sliced inference using GreedyNMM with
@@ -35,7 +26,7 @@
 
 #define PACKAGE "nvsahipostprocess"
 #define VERSION "1.2"
-#define LICENSE "Apache-2.0"
+#define LICENSE "Proprietary"
 #define DESCRIPTION \
     "DeepStream SAHI post-process plugin — GreedyNMM duplicate merging " \
     "with spatial indexing, mask merge, and parallel frame processing"

@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: Copyright (c) 2026 Levi Pereira <levi.pereira@gmail.com>
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: LicenseRef-NvidiaDeepStreamEULA
  *
  * 2D spatial hash grid for fast neighbor queries on axis-aligned bounding boxes.
  *

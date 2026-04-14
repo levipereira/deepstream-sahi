@@ -10,7 +10,7 @@ Usage: $(basename "$0") [OPTIONS]
 Install DeepStream SAHI plugins and all required dependencies.
 
 Options:
-  --plugins-only   Build and install only the SAHI plugins and modified libs
+  --plugins-only   Build and install the SAHI plugins and nvdsinfer_yolo
                    (skip DeepStream deps, Python bindings, and pip packages)
   -h, --help       Show this help message
 
@@ -159,13 +159,16 @@ if ! $PLUGINS_ONLY; then
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Step 3: Build and install SAHI plugins + modified libs
+# Step 3: Build and install SAHI GStreamer plugins + nvdsinfer_yolo
 # ══════════════════════════════════════════════════════════════════════════════
+# libnvds_infer.so comes from the DeepStream SDK (this repo does not ship nvdsinfer sources).
+# libnvds_infer_yolo.so is built from deepstream_source/libs/nvdsinfer_yolo — required for bundled
+# models using EfficientNMS_TRT output (custom parser; see repository LICENSE / DeepStream EULA).
 
 if $PLUGINS_ONLY; then
-    step "Building SAHI plugins and modified libraries"
+    step "Building SAHI plugins and nvdsinfer_yolo"
 else
-    step "Step 3/4 — Building SAHI plugins and modified libraries"
+    step "Step 3/4 — Building SAHI plugins and nvdsinfer_yolo"
 fi
 
 backup_if_exists() {
@@ -176,30 +179,23 @@ backup_if_exists() {
     fi
 }
 
-backup_if_exists "${DS_SOURCES}/libs/nvdsinfer"
+NVDSINFER_YOLO_SRC="${REPO_SOURCES}/libs/nvdsinfer_yolo"
+[[ -d "$NVDSINFER_YOLO_SRC" ]] || error "nvdsinfer_yolo sources not found at ${NVDSINFER_YOLO_SRC}"
+
 backup_if_exists "${DS_SOURCES}/libs/nvdsinfer_yolo"
 
-info "Copying SAHI plugins to ${DS_SOURCES}/gst-plugins/"
-cp -r "${REPO_SOURCES}/gst-plugins/gst-nvsahipreprocess"  "${DS_SOURCES}/gst-plugins/"
-cp -r "${REPO_SOURCES}/gst-plugins/gst-nvsahipostprocess" "${DS_SOURCES}/gst-plugins/"
-
-NVDSINFER_SRC="${REPO_SOURCES}/libs/nvdsinfer_${DS_MAJOR}.0"
-[[ -d "$NVDSINFER_SRC" ]] || error "nvdsinfer source for DS ${DS_MAJOR}.0 not found at ${NVDSINFER_SRC}"
-
-info "Copying modified libs to ${DS_SOURCES}/libs/ (using nvdsinfer_${DS_MAJOR}.0)"
-rm -rf "${DS_SOURCES}/libs/nvdsinfer"
-cp -r "$NVDSINFER_SRC" "${DS_SOURCES}/libs/nvdsinfer"
-cp -r "${REPO_SOURCES}/libs/nvdsinfer_yolo"  "${DS_SOURCES}/libs/"
-
-info "Building nvdsinfer (DS ${DS_VERSION})..."
-make -C "${DS_SOURCES}/libs/nvdsinfer" clean
-make -C "${DS_SOURCES}/libs/nvdsinfer" -j"$(nproc)" CUDA_VER="${CUDA_VER}"
-make -C "${DS_SOURCES}/libs/nvdsinfer" install CUDA_VER="${CUDA_VER}"
+info "Copying nvdsinfer_yolo to ${DS_SOURCES}/libs/"
+rm -rf "${DS_SOURCES}/libs/nvdsinfer_yolo"
+cp -r "$NVDSINFER_YOLO_SRC" "${DS_SOURCES}/libs/nvdsinfer_yolo"
 
 info "Building nvdsinfer_yolo..."
 make -C "${DS_SOURCES}/libs/nvdsinfer_yolo" clean
 make -C "${DS_SOURCES}/libs/nvdsinfer_yolo" -j"$(nproc)" CUDA_VER="${CUDA_VER}"
 make -C "${DS_SOURCES}/libs/nvdsinfer_yolo" install CUDA_VER="${CUDA_VER}"
+
+info "Copying SAHI plugins to ${DS_SOURCES}/gst-plugins/"
+cp -r "${REPO_SOURCES}/gst-plugins/gst-nvsahipreprocess"  "${DS_SOURCES}/gst-plugins/"
+cp -r "${REPO_SOURCES}/gst-plugins/gst-nvsahipostprocess" "${DS_SOURCES}/gst-plugins/"
 
 info "Building gst-nvsahipreprocess..."
 make -C "${DS_SOURCES}/gst-plugins/gst-nvsahipreprocess" clean
@@ -241,11 +237,13 @@ fi
 echo ""
 step "Installation complete!"
 
-info "Installed libraries:"
-ls -lh "${DS_LIB}/libnvds_infer.so"                    2>/dev/null || true
-ls -lh "${DS_LIB}/libnvds_infer_yolo.so"               2>/dev/null || true
+info "Installed SAHI plugin libraries:"
 ls -lh "${DS_GST}/libnvdsgst_sahipreprocess.so"         2>/dev/null || true
 ls -lh "${DS_GST}/libnvdsgst_sahipostprocess.so"        2>/dev/null || true
+info "Inference libraries:"
+ls -lh "${DS_LIB}/libnvds_infer.so"                    2>/dev/null || true
+info "Built from this repository (EfficientNMS parser, nvdsinfer_yolo):"
+ls -lh "${DS_LIB}/libnvds_infer_yolo.so"               2>/dev/null || true
 
 if ! $PLUGINS_ONLY; then
     echo ""
