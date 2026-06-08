@@ -1,6 +1,9 @@
 /*
  * SPDX-FileCopyrightText: Copyright (c) 2026 Levi Pereira <levi.pereira@gmail.com>
- * SPDX-License-Identifier: LicenseRef-NvidiaDeepStreamEULA
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0; see the LICENSE file in this
+ * directory or http://www.apache.org/licenses/LICENSE-2.0
  *
  * Instance-segmentation mask merge utilities for the SAHI postprocess plugin.
  *

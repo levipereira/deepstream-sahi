@@ -3,7 +3,8 @@
 This repository provides a custom implementation of parsing function to DeepStream for YOLO models exported using custom Plugins EfficientNMSX_TRT and ROIAling_TRT for Instance Segmentation Models and EfficientNMS_TRT for Detection Models.
 
 `NvDsInferYoloMask` - For Segmentation Models <br>
-`NvDsInferYoloNMS`  - For Detection Models
+`NvDsInferYoloNMS`  - For Detection Models (EfficientNMS tensors: num_dets/det_boxes/det_scores/det_classes) <br>
+`NvDsInferYoloE2E`  - For end-to-end / NMS-free Detection Models with a single `[N,6]` output (x1,y1,x2,y2,conf,class_id) — e.g. YOLOv10 / YOLO26 / YOLO-NAS. NMS is already done inside the model; in the SAHI pipeline cross-tile merging is handled by `nvsahipostprocess`. Use `cluster-mode=2` (NOT 4 — `cluster-mode=4` produces wrong OSD boxes here because the NVIDIA clustering path normalizes coordinates the downstream stages rely on).
 
 # Deployment Guide for NvDsInferYolo
 

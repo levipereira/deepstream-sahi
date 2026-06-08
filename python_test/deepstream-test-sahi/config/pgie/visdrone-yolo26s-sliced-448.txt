@@ -1,0 +1,48 @@
+################################################################################
+# PGIE config — YOLO26s (VisDrone, sliced 448) for the DeepStream-SAHI pipeline.
+#
+# YOLO26 is end-to-end / NMS-free: the ONNX emits a single output tensor
+#   output0 = [N, 6]  ->  x1, y1, x2, y2, conf, class_id   (already post-NMS)
+# so we use the NvDsInferYoloE2E parser (from libnvds_infer_yolo.so) and let
+# nvsahipostprocess merge detections across tiles (GreedyNMM).
+#
+# Tensors are fed by nvsahipreprocess (see config/preprocess/preprocess_448.txt,
+# processing 448x448, RGB, /255), so the scaling keys below are only used if this
+# GIE is run standalone.
+#
+# Place the model here (LFS copy from the model package), or edit onnx-file:
+#   cp model_zoo/visdrone_yolo26/04_models/yolo26s/best.onnx \
+#      python_test/deepstream-test-sahi/models/yolo26s-visdrone-sliced-448.onnx
+################################################################################
+
+[property]
+gpu-id=0
+net-scale-factor=0.0039215697906911373
+model-color-format=0
+onnx-file=../../models/yolo26s-visdrone-sliced-448.onnx
+model-engine-file=../../models/yolo26s-visdrone-sliced-448.engine
+labelfile-path=../../models/visdrone_label.txt
+batch-size=16
+infer-dims=3;448;448
+force-implicit-batch-dim=0
+# 0: FP32 1: INT8 2: FP16
+network-mode=2
+num-detected-classes=11
+interval=0
+gie-unique-id=1
+process-mode=1
+# 0: Detector 1: Classifier 2: Segmentation 3: Instance Segmentation
+network-type=0
+# Always use cluster-mode=2 in this SAHI pipeline. Even though YOLO26 is NMS-free,
+# cluster-mode=4 produces wrong bounding boxes in the OSD (the NVIDIA clustering path
+# applies a coordinate normalization that the downstream stages rely on). cluster-mode=2
+# is required for correct boxes and does not add meaningful latency here.
+cluster-mode=2
+maintain-aspect-ratio=1
+symmetric-padding=1
+parse-bbox-func-name=NvDsInferYoloE2E
+custom-lib-path=/opt/nvidia/deepstream/deepstream/lib/libnvds_infer_yolo.so
+output-blob-names=output0
+
+[class-attrs-all]
+pre-cluster-threshold=0.25

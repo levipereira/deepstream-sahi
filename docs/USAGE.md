@@ -47,10 +47,14 @@ python_test/
 
 ## Available Models
 
-| Model ID | Description | Input Size | Classes |
-|----------|-------------|-----------|---------|
-| `visdrone-full-640` | VisDrone GELAN-C (full-frame training) | 640x640 | 11 |
-| `visdrone-sliced-448` | VisDrone GELAN-C (sliced training) | 448x448 | 11 |
+| Model ID | Description | Input Size | Classes | Output / parser |
+|----------|-------------|-----------|---------|-----------------|
+| `visdrone-full-640` | VisDrone GELAN-C (full-frame training) | 640x640 | 11 | EfficientNMS → `NvDsInferYoloNMS` |
+| `visdrone-sliced-448` | VisDrone GELAN-C (sliced training) | 448x448 | 11 | EfficientNMS → `NvDsInferYoloNMS` |
+| `visdrone-yolo26s-sliced-448` | VisDrone YOLO26s (sliced training, end-to-end / NMS-free) | 448x448 | 11 | `[N,6]` → `NvDsInferYoloE2E` |
+| `visdrone-yolo26n-sliced-416` | VisDrone YOLO26n (sliced training, end-to-end / NMS-free) | 416x416 | 11 | `[N,6]` → `NvDsInferYoloE2E` |
+
+See **[SAHI Model Benchmark](SAHI_MODEL_BENCHMARK.md)** for a real in-pipeline FPS + detection comparison.
 
 ## How Model Configuration Differs: SAHI vs Standard
 
@@ -129,6 +133,59 @@ When adding a new model for SAHI, these parameters must be consistent across bot
 |-------|------------|-------------------|
 | `visdrone-full-640` | `config/pgie/visdrone-full-640.txt` | `config/preprocess/preprocess_640.txt` |
 | `visdrone-sliced-448` | `config/pgie/visdrone-sliced-448.txt` | `config/preprocess/preprocess_448.txt` |
+| `visdrone-yolo26s-sliced-448` | `config/pgie/visdrone-yolo26s-sliced-448.txt` | `config/preprocess/preprocess_448.txt` (shared) |
+| `visdrone-yolo26n-sliced-416` | `config/pgie/visdrone-yolo26n-sliced-416.txt` | `config/preprocess/preprocess_416.txt` |
+
+## Adding a New Model (worked example: YOLO26)
+
+The repo ships the **YOLO26s** detector (`visdrone-yolo26s-sliced-448`) as a second-family example.
+Use these steps to add any new detector to the SAHI pipeline.
+
+**1. Place the ONNX** under `models/` (Git LFS). YOLO26 ships in the model package; it is symlinked here:
+
+```bash
+# from python_test/deepstream-test-sahi/models/
+ln -sf ../../../model_zoo/visdrone_yolo26/04_models/yolo26s/best.onnx \
+       yolo26s-visdrone-sliced-448.onnx
+# (or copy the .onnx if you prefer a standalone file)
+```
+
+**2. Pick the parser** based on the model's output tensor (all live in `libnvds_infer_yolo.so`):
+
+| Model output | `parse-bbox-func-name` | Notes |
+|--------------|------------------------|-------|
+| EfficientNMS tensors (`num_dets`, `det_boxes`, ...) | `NvDsInferYoloNMS` | GELAN-C default |
+| End-to-end / NMS-free single `[N,6]` (x1,y1,x2,y2,conf,class) | `NvDsInferYoloE2E` | YOLO26 / YOLOv10 / YOLO-NAS |
+| Instance-seg | `NvDsInferYoloMask` | seg models |
+
+**3. Write the pgie config** (`config/pgie/<model>.txt`). For YOLO26 see
+`config/pgie/visdrone-yolo26s-sliced-448.txt`. Key fields vs the GELAN config:
+`parse-bbox-func-name=NvDsInferYoloE2E`, `output-blob-names=output0`, `num-detected-classes=11`,
+and **`cluster-mode=2`** (always — `cluster-mode=4` renders wrong boxes in the OSD here).
+
+**4. Reuse or create the preprocess config.** YOLO26s is 448×448, so it **reuses**
+`config/preprocess/preprocess_448.txt`. For a different input size, copy it and update
+`processing-width/height` and `network-input-shape` (see the matching-parameters table above).
+Set `tensor-name` to match the model's input layer name (YOLO models use `images`).
+
+**5. Register the model** in `pipeline_common.py` → `MODELS` (id, `pgie_config`, `preprocess_config`,
+`input_size`, `class_names`, `default_slice`). It then appears in `--model` automatically.
+
+**6. Run it** (same CLI as any model):
+
+```bash
+python3 deepstream_test_sahi.py --model visdrone-yolo26s-sliced-448 --csv -i ../videos/aerial_vehicles.mp4
+```
+
+> The first run builds the TensorRT engine from the ONNX (cached as
+> `models/<name>.engine`); subsequent runs reuse it.
+
+### Non-obvious rules when adding models
+
+- **`cluster-mode=2` always.** Even for NMS-free models, `cluster-mode=4` renders **wrong boxes in the OSD** (the NVIDIA clustering path normalizes coordinates the downstream stages rely on).
+- **`batch-size` (pgie) = `network-input-shape[0]` (preprocess) = tiles/frame.** nvinfer runs `ceil(tiles/batch)` inference passes per frame; matching them → 1 frame = 1 inference (roughly 3× FPS, no accuracy change). Tiles/frame at 2560×1440: **41** @ slice 416, **29** @ 448, **16** @ 640. Adjust for your resolution/slice size.
+- **Multi-camera:** batch = **`cameras × tiles/frame`** (the preprocess emits that many ROIs). For example, 2 cameras × 41 tiles = batch 82 (heavy); aim for a low tile count so `cameras × tiles` stays manageable.
+- **Object overload:** above ~2000 objects/frame the OSD + GreedyNMM merge dominate and FPS collapses. The OSD probe emits a one-time WARN. Bound it with `pre-cluster-threshold`, fewer tiles, or `max-detections` on `nvsahipostprocess`.
 
 ## Running the SAHI Pipeline
 

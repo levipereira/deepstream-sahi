@@ -1,0 +1,9 @@
+model,batch,status,throughput_qps,gpu_compute_mean_ms,gpu_compute_median_ms,gpu_compute_p99_ms
+yolo26n,1,OK,2313.36,,,
+yolo26n,4,OK,1828.4,,,
+yolo26n,8,OK,1423.63,,,
+yolo26n,16,OK,972.305,,,
+yolo26n,32,OK,562.82,,,
+yolo26n,64,OK,286.816,,,
+yolo26n,128,OK,132.978,,,
+yolo26n,256,OK,62.4874,,,

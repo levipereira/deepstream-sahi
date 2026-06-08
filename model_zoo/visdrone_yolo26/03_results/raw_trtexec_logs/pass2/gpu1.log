@@ -1,0 +1,45 @@
+
+=====================
+== NVIDIA TensorRT ==
+=====================
+
+NVIDIA Release 25.11 (build 232842699)
+NVIDIA TensorRT Version 10.14.1
+Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+Container image Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+https://developer.nvidia.com/tensorrt
+
+Various files include modifications (c) NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+GOVERNING TERMS: The software and materials are governed by the NVIDIA Software License Agreement
+(found at https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/)
+and the Product-Specific Terms for NVIDIA AI Products
+(found at https://www.nvidia.com/en-us/agreements/enterprise-software/product-specific-terms-for-ai-products/).
+To install the open-source samples corresponding to this TensorRT release version
+run /opt/tensorrt/install_opensource.sh.  To build the open source parsers,
+plugins, and samples for current top-of-tree on master or a different branch,
+run /opt/tensorrt/install_opensource.sh -b <branch>
+See https://github.com/NVIDIA/TensorRT for more information.
+
+[GPU1] building engine yolo26s batch=1 ...
+[GPU1] yolo26s b1 s1 -> thr=1878.57qps  comp_mean=0.530802ms  p99=0.531738ms
+[GPU1] yolo26s b1 s2 -> thr=2802.93qps  comp_mean=0.712025ms  p99=0.720947ms
+[GPU1] yolo26s b1 s4 -> thr=3911.09qps  comp_mean=0.998961ms  p99=1.04639ms
+[GPU1] yolo26s b1 s8 -> thr=4510.92qps  comp_mean=1.75208ms  p99=1.85059ms
+[GPU1] building engine yolo26s batch=8 ...
+[GPU1] yolo26s b8 s1 -> thr=824.251qps  comp_mean=1.21173ms  p99=1.21448ms
+[GPU1] yolo26s b8 s2 -> thr=904.888qps  comp_mean=2.20862ms  p99=2.2915ms
+[GPU1] yolo26s b8 s4 -> thr=886.7qps  comp_mean=4.50734ms  p99=4.84277ms
+[GPU1] yolo26s b8 s8 -> thr=793.174qps  comp_mean=10.0736ms  p99=10.5522ms
+[GPU1] building engine yolo26s batch=16 ...
+[GPU1] yolo26s b16 s1 -> thr=484.233qps  comp_mean=2.06363ms  p99=2.06885ms
+[GPU1] yolo26s b16 s2 -> thr=500.544qps  comp_mean=3.99359ms  p99=4.08643ms
+[GPU1] yolo26s b16 s4 -> thr=444.254qps  comp_mean=8.99401ms  p99=9.69238ms
+[GPU1] yolo26s b16 s8 -> thr=387.064qps  comp_mean=20.6294ms  p99=21.2532ms
+[GPU1] building engine yolo26s batch=32 ...
+[GPU1] yolo26s b32 s1 -> thr=235.306qps  comp_mean=4.24827ms  p99=4.27417ms
+[GPU1] yolo26s b32 s2 -> thr=231.61qps  comp_mean=8.63061ms  p99=8.80933ms
+[GPU1] yolo26s b32 s4 -> thr=205.787qps  comp_mean=19.4127ms  p99=19.8716ms
+[GPU1] yolo26s b32 s8 -> thr=188.992qps  comp_mean=42.2416ms  p99=43.1318ms
+[GPU1] streams worker done.

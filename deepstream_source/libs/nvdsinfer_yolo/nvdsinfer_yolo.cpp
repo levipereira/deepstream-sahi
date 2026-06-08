@@ -48,7 +48,13 @@ extern "C" bool NvDsInferYoloMask(
     NvDsInferNetworkInfo const &networkInfo,
     NvDsInferParseDetectionParams const &detectionParams,
     std::vector<NvDsInferInstanceMaskInfo> &objectList);
-                                   
+
+extern "C"
+bool NvDsInferYoloE2E (std::vector<NvDsInferLayerInfo> const &outputLayersInfo,
+                                   NvDsInferNetworkInfo  const &networkInfo,
+                                   NvDsInferParseDetectionParams const &detectionParams,
+                                   std::vector<NvDsInferObjectDetectionInfo> &objectList);
+
 
 extern "C"
 bool NvDsInferYoloNMS (std::vector<NvDsInferLayerInfo> const &outputLayersInfo,
@@ -202,6 +208,117 @@ bool NvDsInferYoloNMS (std::vector<NvDsInferLayerInfo> const &outputLayersInfo,
 
             objectList.push_back(object);
         }
+    }
+    return true;
+}
+
+
+/*
+ * NvDsInferYoloE2E
+ * End-to-end / NMS-free detectors that output a single dense tensor [N, 6]
+ * (or [1, N, 6]): each row = [x1, y1, x2, y2, conf, class_id], already post-NMS
+ * inside the model (YOLOv10 / YOLO26 / YOLO-NAS).
+ *
+ * In the SAHI pipeline detections are decoded here in network (tile) coordinates;
+ * cross-tile merging is done afterwards by nvsahipostprocess (GreedyNMM). The model
+ * is already NMS-free, but use cluster-mode=2 in the nvinfer config: cluster-mode=4
+ * yields wrong OSD boxes here (the NVIDIA clustering path normalizes coordinates that
+ * downstream stages rely on). pre-cluster-threshold is honored for score filtering.
+ *
+ * Adapted from the unified DeepStream-Yolo E2E parser (NvDsInferParseYoloDetE2E).
+ */
+extern "C"
+bool NvDsInferYoloE2E (std::vector<NvDsInferLayerInfo> const &outputLayersInfo,
+                                   NvDsInferNetworkInfo  const &networkInfo,
+                                   NvDsInferParseDetectionParams const &detectionParams,
+                                   std::vector<NvDsInferObjectDetectionInfo> &objectList) {
+    if (outputLayersInfo.empty()) {
+        std::cerr << "NvDsInferYoloE2E: no output layers" << std::endl;
+        return false;
+    }
+
+    auto layerFinder = [&outputLayersInfo](const std::string &name)
+        -> const NvDsInferLayerInfo *{
+        for (auto &layer : outputLayersInfo) {
+            if (layer.layerName && name == layer.layerName) {
+                return &layer;
+            }
+        }
+        return nullptr;
+    };
+
+    /* Prefer the conventional output name, fall back to the first layer. */
+    const NvDsInferLayerInfo *layer = layerFinder("output0");
+    if (!layer) {
+        layer = layerFinder("output");
+    }
+    if (!layer) {
+        layer = &outputLayersInfo[0];
+    }
+    if (!layer->buffer) {
+        std::cerr << "NvDsInferYoloE2E: output layer has no buffer" << std::endl;
+        return false;
+    }
+
+    /* Accept [N,6] or [1,N,6]. */
+    const NvDsInferDims &dims = layer->inferDims;
+    unsigned int numDet = 0;
+    unsigned int cols = 0;
+    if (dims.numDims == 2) {
+        numDet = (unsigned int) dims.d[0];
+        cols   = (unsigned int) dims.d[1];
+    } else if (dims.numDims == 3 && dims.d[0] == 1) {
+        numDet = (unsigned int) dims.d[1];
+        cols   = (unsigned int) dims.d[2];
+    }
+
+    if (cols < 6 || numDet == 0) {
+        std::cerr << "NvDsInferYoloE2E: expected [N,>=6] tensor, got numDims="
+                  << dims.numDims << std::endl;
+        return false;
+    }
+
+    const char* log_enable = std::getenv("ENABLE_DEBUG");
+    const float* data = (const float *) layer->buffer;
+    const unsigned int numClasses =
+        (unsigned int) detectionParams.perClassPreclusterThreshold.size();
+
+    for (unsigned int i = 0; i < numDet; ++i) {
+        const float* det = data + (size_t) i * cols;
+        const float conf = det[4];
+        const int classId = (int) det[5];
+
+        if (classId < 0 || (numClasses > 0 && (unsigned int) classId >= numClasses)) {
+            continue;
+        }
+        if (conf < detectionParams.perClassPreclusterThreshold[classId]) {
+            continue;
+        }
+
+        NvDsInferObjectDetectionInfo object;
+        object.classId = classId;
+        object.detectionConfidence = conf;
+        object.left   = det[0];
+        object.top    = det[1];
+        object.width  = det[2] - det[0];
+        object.height = det[3] - det[1];
+
+        if (log_enable != NULL && std::stoi(log_enable)) {
+            std::cout << "label/conf/ x/y w/h -- "
+                      << classId << " " << conf << " "
+                      << object.left << " " << object.top << " "
+                      << object.width << " " << object.height << std::endl;
+        }
+
+        object.left   = CLIP(object.left, 0, networkInfo.width - 1);
+        object.top    = CLIP(object.top, 0, networkInfo.height - 1);
+        object.width  = CLIP(object.width, 0, networkInfo.width - 1);
+        object.height = CLIP(object.height, 0, networkInfo.height - 1);
+
+        if (object.width < 1 || object.height < 1) {
+            continue;
+        }
+        objectList.push_back(object);
     }
     return true;
 }
@@ -367,4 +484,5 @@ extern "C" bool NvDsInferYoloMask(
 
 
 CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferYoloNMS);
+CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferYoloE2E);
 CHECK_CUSTOM_INSTANCE_MASK_PARSE_FUNC_PROTOTYPE(NvDsInferYoloMask);

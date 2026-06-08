@@ -1,0 +1,8 @@
+# VisDrone YOLO Slice 416x416 (20% overlap)
+path: /dataset/dfine/dataset/yolo_slice 
+train: /dataset/dfine/dataset/train.txt
+val: /dataset/dfine/dataset/val.txt
+
+nc: 11
+nc: 11
+names: ['pedestrian','people','bicycle','car','van','truck','tricycle','awning-tricycle','bus','motor','others']
