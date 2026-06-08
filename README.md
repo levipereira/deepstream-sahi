@@ -38,6 +38,14 @@ selectable at run time with `--model`. Full plugin reference: [`docs/PLUGINS.md`
 TensorRT EfficientNMS / NMS-free outputs the stock sample parser does not decode). Details:
 [`docs/INSTALL.md`](docs/INSTALL.md).
 
+## AI coding assistant support
+
+The repository ships a [`CLAUDE.md`](CLAUDE.md) and [`.claude/skills/`](.claude/skills/) so **AI
+coding assistants** (e.g. Claude Code) can work with this project out of the box — they pick up the
+build/run workflow, the registered models, and the pipeline's non-obvious rules (`cluster-mode=2`,
+`batch = tiles/frame`, the overload alert) automatically. If you use an AI code assistant, just open
+it at the repository root; no extra setup is needed.
+
 ## Quick Start
 
 This repository uses [Git LFS](https://git-lfs.com/) for ONNX model files.
