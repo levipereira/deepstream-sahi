@@ -1,16 +1,50 @@
-NVIDIA DeepStream SDK License Agreement
-=======================================
+deepstream-sahi — Licensing
+===========================
 
-This repository (deepstream-sahi) is intended for use with the NVIDIA DeepStream SDK.
+This repository is multi-licensed per component. The SPDX header in each source
+file is authoritative; this file summarizes the split.
 
-Use, modification, and distribution are governed by the NVIDIA DeepStream SDK License
-Agreement, including the Software License Agreement for NVIDIA Software Development
-Kits and the DeepStream supplement:
+--------------------------------------------------------------------------------
+1. nvsahipostprocess plugin  ->  Apache License 2.0
+--------------------------------------------------------------------------------
+
+`deepstream_source/gst-plugins/gst-nvsahipostprocess/` is original work by
+Levi Pereira and is licensed under the **Apache License, Version 2.0**. The full
+text is in that directory's `LICENSE` file, and each source file carries
+`SPDX-License-Identifier: Apache-2.0`.
+
+  Copyright 2026 Levi Pereira
+  https://www.apache.org/licenses/LICENSE-2.0
+
+Note: building and running this plugin requires the NVIDIA DeepStream SDK (it
+includes SDK headers and links DeepStream libraries at runtime). Apache-2.0
+covers this plugin's source; the DeepStream SDK itself remains governed by the
+NVIDIA agreement below.
+
+--------------------------------------------------------------------------------
+2. nvsahipreprocess plugin + the rest of the repo  ->  NVIDIA DeepStream SDK EULA
+--------------------------------------------------------------------------------
+
+`deepstream_source/gst-plugins/gst-nvsahipreprocess/` is a derivative work of the
+NVIDIA DeepStream SDK sample `gst-nvdspreprocess` and contains NVIDIA proprietary
+source. It, and the remainder of this repository not otherwise marked, are
+governed by the NVIDIA DeepStream SDK License Agreement:
 
   https://developer.nvidia.com/deepstream-eula
 
-Some paths retain per-file copyright or SPDX notices (for example, derivative works of
-NVIDIA sample code). Those notices must be preserved where they appear.
+These files carry `SPDX-License-Identifier: LicenseRef-NvidiaProprietary` (preprocess)
+or `LicenseRef-NvidiaDeepStreamEULA`, and retain NVIDIA's copyright notices, which
+must be preserved.
 
-Obtain and accept the agreement that applies to your DeepStream SDK version from NVIDIA;
-this file is a pointer, not a substitute for the official terms.
+--------------------------------------------------------------------------------
+3. nvdsinfer_yolo parser library
+--------------------------------------------------------------------------------
+
+`deepstream_source/libs/nvdsinfer_yolo/` has its own `LICENSE` file and per-file
+notices; refer to those.
+
+--------------------------------------------------------------------------------
+
+Obtain and accept the NVIDIA agreement that applies to your DeepStream SDK version
+from NVIDIA; the pointers above are not a substitute for the official terms.
+Per-file SPDX/copyright notices always take precedence over this summary.

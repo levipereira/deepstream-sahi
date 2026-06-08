@@ -54,3 +54,6 @@ __pycache__/
 
 # Test videos (download from Google Drive)
 python_test/videos/*.mp4
+
+# Generated test outputs (CSV/MP4)
+python_test/deepstream-test-sahi/results/

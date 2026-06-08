@@ -1,0 +1,41 @@
+
+=====================
+== NVIDIA TensorRT ==
+=====================
+
+NVIDIA Release 25.11 (build 232842699)
+NVIDIA TensorRT Version 10.14.1
+Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+Container image Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+https://developer.nvidia.com/tensorrt
+
+Various files include modifications (c) NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+GOVERNING TERMS: The software and materials are governed by the NVIDIA Software License Agreement
+(found at https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/)
+and the Product-Specific Terms for NVIDIA AI Products
+(found at https://www.nvidia.com/en-us/agreements/enterprise-software/product-specific-terms-for-ai-products/).
+To install the open-source samples corresponding to this TensorRT release version
+run /opt/tensorrt/install_opensource.sh.  To build the open source parsers,
+plugins, and samples for current top-of-tree on master or a different branch,
+run /opt/tensorrt/install_opensource.sh -b <branch>
+See https://github.com/NVIDIA/TensorRT for more information.
+
+[GPU0] building+benchmarking yolo26n batch=1 ...
+[GPU0] yolo26n b1 -> thr=2313.36 qps  comp_mean=ms  p99=ms
+[GPU0] building+benchmarking yolo26n batch=4 ...
+[GPU0] yolo26n b4 -> thr=1828.4 qps  comp_mean=ms  p99=ms
+[GPU0] building+benchmarking yolo26n batch=8 ...
+[GPU0] yolo26n b8 -> thr=1423.63 qps  comp_mean=ms  p99=ms
+[GPU0] building+benchmarking yolo26n batch=16 ...
+[GPU0] yolo26n b16 -> thr=972.305 qps  comp_mean=ms  p99=ms
+[GPU0] building+benchmarking yolo26n batch=32 ...
+[GPU0] yolo26n b32 -> thr=562.82 qps  comp_mean=ms  p99=ms
+[GPU0] building+benchmarking yolo26n batch=64 ...
+[GPU0] yolo26n b64 -> thr=286.816 qps  comp_mean=ms  p99=ms
+[GPU0] building+benchmarking yolo26n batch=128 ...
+[GPU0] yolo26n b128 -> thr=132.978 qps  comp_mean=ms  p99=ms
+[GPU0] building+benchmarking yolo26n batch=256 ...
+[GPU0] yolo26n b256 -> thr=62.4874 qps  comp_mean=ms  p99=ms
+[GPU0] worker done.

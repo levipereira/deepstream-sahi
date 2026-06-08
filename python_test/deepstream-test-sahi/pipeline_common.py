@@ -96,6 +96,38 @@ MODELS = {
         ],
         "default_slice": 448,
     },
+    "visdrone-yolo26s-sliced-448": {
+        "description": "VisDrone YOLO26s (sliced training, 448x448, end-to-end/NMS-free)",
+        "pgie_config": "config/pgie/visdrone-yolo26s-sliced-448.txt",
+        "preprocess_config": "config/preprocess/preprocess_448.txt",
+        "input_size": 448,
+        "num_classes": 11,
+        "class_names": [
+            "pedestrian", "people", "bicycle", "car", "van",
+            "truck", "tricycle", "awning-tricycle", "bus", "motor", "others",
+        ],
+        "class_short": [
+            "ped", "ppl", "bik", "car", "van",
+            "trk", "tri", "awn", "bus", "mtr", "oth",
+        ],
+        "default_slice": 448,
+    },
+    "visdrone-yolo26n-sliced-416": {
+        "description": "VisDrone YOLO26n (sliced training, 416x416, end-to-end/NMS-free)",
+        "pgie_config": "config/pgie/visdrone-yolo26n-sliced-416.txt",
+        "preprocess_config": "config/preprocess/preprocess_416.txt",
+        "input_size": 416,
+        "num_classes": 11,
+        "class_names": [
+            "pedestrian", "people", "bicycle", "car", "van",
+            "truck", "tricycle", "awning-tricycle", "bus", "motor", "others",
+        ],
+        "class_short": [
+            "ped", "ppl", "bik", "car", "van",
+            "trk", "tri", "awn", "bus", "mtr", "oth",
+        ],
+        "default_slice": 416,
+    },
 }
 
 # ─── Constants ───────────────────────────────────────────────────────────────
@@ -136,6 +168,13 @@ OSD_LABEL_FONT_SIZE = 8
 OSD_LABEL_BG_ALPHA = 0.55
 OSD_HUD_FONT_SIZE = 11
 OSD_HUD_BG_ALPHA = 0.7
+
+# Above this many objects in a single frame, the OSD rendering and the
+# nvsahipostprocess GreedyNMM merge dominate the pipeline and FPS drops sharply.
+# We emit a one-time warning so the user can bound it (pre-cluster-threshold /
+# max-detections). DETR-style heads at a low threshold can flood a dense scene.
+OSD_OBJECT_WARN_THRESHOLD = 2000
+_obj_overload_warned = False
 
 # ─── Globals set by each test script before pipeline starts ──────────────────
 
@@ -260,8 +299,14 @@ def make_elm_or_die(factory, name):
 
 def create_sink(platform_info, no_display=False):
     if no_display:
-        print("Using fakesink (no display)")
-        return make_elm_or_die("fakesink", "fakesink")
+        print("Using fakesink (no display, sync=false)")
+        s = make_elm_or_die("fakesink", "fakesink")
+        # Benchmark mode: do not throttle to the stream clock and do not drop
+        # frames via QoS — measures the pipeline's real max FPS.
+        s.set_property("sync", False)
+        s.set_property("async", False)
+        s.set_property("qos", False)
+        return s
     if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
         sys.stderr.write(
             "WARNING: --display requested but no DISPLAY or WAYLAND_DISPLAY "
@@ -370,6 +415,19 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
         frame_number = frame_meta.frame_num
         num_rects = frame_meta.num_obj_meta
         obj_counter = {i: 0 for i in range(num_classes)}
+
+        # ── Overload alert (one-time): too many objects/frame ──
+        global _obj_overload_warned
+        if num_rects > OSD_OBJECT_WARN_THRESHOLD and not _obj_overload_warned:
+            _obj_overload_warned = True
+            sys.stderr.write(
+                f"\n[WARN] frame {frame_number}: {num_rects} objects in ONE frame "
+                f"(> {OSD_OBJECT_WARN_THRESHOLD}).\n"
+                f"       At this density the OSD draw and the nvsahipostprocess merge "
+                f"become the bottleneck and FPS will drop sharply.\n"
+                f"       Mitigate: raise 'pre-cluster-threshold' in the pgie config, "
+                f"lower the slice/tile count, and/or set "
+                f"'max-detections' on nvsahipostprocess (default -1 = unlimited).\n\n")
 
         # ── Style each detected object ──
         l_obj = frame_meta.obj_meta_list

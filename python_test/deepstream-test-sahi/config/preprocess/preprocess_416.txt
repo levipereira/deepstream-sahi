@@ -1,0 +1,37 @@
+################################################################################
+# Preprocess config for 416x416 models (e.g. visdrone-sliced-416)
+#
+# Slice parameters (slice-width, slice-height, overlap-*-ratio,
+# enable-full-frame) are set as GStreamer element properties, NOT here.
+################################################################################
+
+[property]
+enable=1
+target-unique-ids=1
+# 0=NCHW, 1=NHWC
+network-input-order=0
+maintain-aspect-ratio=1
+symmetric-padding=1
+processing-width=416
+processing-height=416
+scaling-buf-pool-size=6
+tensor-buf-pool-size=6
+# network-input-shape: B;C;H;W -- set B = tiles/frame (= pgie batch-size)
+# so each frame is ONE inference. 41 @ slice416/2560x1440 (16 @ slice640, 29 @ slice448).
+network-input-shape=41;3;416;416
+# 0=RGB, 1=BGR, 2=GRAY
+network-color-format=0
+# 0=FP32, 1=UINT8, 2=INT8, 3=UINT32, 4=INT32, 5=FP16
+tensor-data-type=0
+tensor-name=images
+# 0=DEFAULT, 1=CUDA_PINNED, 2=CUDA_DEVICE, 3=CUDA_UNIFIED, 4=SURFACE_ARRAY
+scaling-pool-memory-type=0
+# 0=Default, 1=GPU, 2=VIC(Jetson)
+scaling-pool-compute-hw=0
+# 0=Nearest, 1=Bilinear
+scaling-filter=0
+custom-lib-path=/opt/nvidia/deepstream/deepstream/lib/gst-plugins/libcustom2d_preprocess.so
+custom-tensor-preparation-function=CustomTensorPreparation
+
+[user-configs]
+pixel-normalization-factor=0.003921568

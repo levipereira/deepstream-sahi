@@ -1,0 +1,153 @@
+&&&& RUNNING TensorRT.trtexec [TensorRT v101401] [b48] # trtexec --onnx=models/yolo26s/best.onnx --fp16 --minShapes=images:1x3x448x448 --optShapes=images:1x3x448x448 --maxShapes=images:1x3x448x448 --saveEngine=/work/trt_bench_streams/engines/yolo26s_b1.engine --timingCacheFile=/work/trt_bench_streams/cache/yolo26s.cache --memPoolSize=workspace:8192 --skipInference
+[06/07/2026-16:06:04] [W] Weakly-typed networks have been deprecated in TensorRT. You can use the AutoCast tool (https://nvidia.github.io/TensorRT-Model-Optimizer/guides/8_autocast.html) to convert the network to be strongly typed.
+[06/07/2026-16:06:04] [I] === Model Options ===
+[06/07/2026-16:06:04] [I] Format: ONNX
+[06/07/2026-16:06:04] [I] Model: models/yolo26s/best.onnx
+[06/07/2026-16:06:04] [I] Output:
+[06/07/2026-16:06:04] [I] === Build Options ===
+[06/07/2026-16:06:04] [I] Memory Pools: workspace: 8192 MiB, dlaSRAM: default, dlaLocalDRAM: default, dlaGlobalDRAM: default, tacticSharedMem: default
+[06/07/2026-16:06:04] [I] avgTiming: 8
+[06/07/2026-16:06:04] [I] Precision: FP32+FP16
+[06/07/2026-16:06:04] [I] LayerPrecisions: 
+[06/07/2026-16:06:04] [I] Layer Device Types: 
+[06/07/2026-16:06:04] [I] Decomposable Attentions: 
+[06/07/2026-16:06:04] [I] Calibration: 
+[06/07/2026-16:06:04] [I] Refit: Disabled
+[06/07/2026-16:06:04] [I] Strip weights: Disabled
+[06/07/2026-16:06:04] [I] Version Compatible: Disabled
+[06/07/2026-16:06:04] [I] ONNX Plugin InstanceNorm: Disabled
+[06/07/2026-16:06:04] [I] ONNX kENABLE_UINT8_AND_ASYMMETRIC_QUANTIZATION_DLA flag: Disabled
+[06/07/2026-16:06:04] [I] TensorRT runtime: full
+[06/07/2026-16:06:04] [I] Lean DLL Path: 
+[06/07/2026-16:06:04] [I] Tempfile Controls: { in_memory: allow, temporary: allow }
+[06/07/2026-16:06:04] [I] Exclude Lean Runtime: Disabled
+[06/07/2026-16:06:04] [I] Sparsity: Disabled
+[06/07/2026-16:06:04] [I] Safe mode: Disabled
+[06/07/2026-16:06:04] [I] Build DLA standalone loadable: Disabled
+[06/07/2026-16:06:04] [I] Allow GPU fallback for DLA: Disabled
+[06/07/2026-16:06:04] [I] DirectIO mode: Disabled
+[06/07/2026-16:06:04] [I] Restricted mode: Disabled
+[06/07/2026-16:06:04] [I] Skip inference: Enabled
+[06/07/2026-16:06:04] [I] Save engine: /work/trt_bench_streams/engines/yolo26s_b1.engine
+[06/07/2026-16:06:04] [I] Load engine: 
+[06/07/2026-16:06:04] [I] Profiling verbosity: 0
+[06/07/2026-16:06:04] [I] Tactic sources: Using default tactic sources
+[06/07/2026-16:06:04] [I] timingCacheMode: global
+[06/07/2026-16:06:04] [I] timingCacheFile: /work/trt_bench_streams/cache/yolo26s.cache
+[06/07/2026-16:06:04] [I] Enable Compilation Cache: Enabled
+[06/07/2026-16:06:04] [I] Enable Monitor Memory: Disabled
+[06/07/2026-16:06:04] [I] errorOnTimingCacheMiss: Disabled
+[06/07/2026-16:06:04] [I] Preview Features: Use default preview flags.
+[06/07/2026-16:06:04] [I] MaxAuxStreams: -1
+[06/07/2026-16:06:04] [I] BuilderOptimizationLevel: -1
+[06/07/2026-16:06:04] [I] MaxTactics: -1
+[06/07/2026-16:06:04] [I] Calibration Profile Index: 0
+[06/07/2026-16:06:04] [I] Weight Streaming: Disabled
+[06/07/2026-16:06:04] [I] Runtime Platform: Same As Build
+[06/07/2026-16:06:04] [I] Debug Tensors: 
+[06/07/2026-16:06:04] [I] Distributive Independence: Disabled
+[06/07/2026-16:06:04] [I] Mark Unfused Tensors As Debug Tensors: Disabled
+[06/07/2026-16:06:04] [I] Input(s)s format: fp32:CHW
+[06/07/2026-16:06:04] [I] Output(s)s format: fp32:CHW
+[06/07/2026-16:06:04] [I] Input build shape (profile 0): images=1x3x448x448+1x3x448x448+1x3x448x448
+[06/07/2026-16:06:04] [I] Input calibration shapes: model
+[06/07/2026-16:06:04] [I] === System Options ===
+[06/07/2026-16:06:04] [I] Device: 0
+[06/07/2026-16:06:04] [I] DLACore: 
+[06/07/2026-16:06:04] [I] Plugins:
+[06/07/2026-16:06:04] [I] setPluginsToSerialize:
+[06/07/2026-16:06:04] [I] dynamicPlugins:
+[06/07/2026-16:06:04] [I] ignoreParsedPluginLibs: 0
+[06/07/2026-16:06:04] [I] 
+[06/07/2026-16:06:04] [I] === Inference Options ===
+[06/07/2026-16:06:04] [I] Batch: Explicit
+[06/07/2026-16:06:04] [I] Input inference shape : images=1x3x448x448
+[06/07/2026-16:06:04] [I] Iterations: 10
+[06/07/2026-16:06:04] [I] Duration: 3s (+ 200ms warm up)
+[06/07/2026-16:06:04] [I] Sleep time: 0ms
+[06/07/2026-16:06:04] [I] Idle time: 0ms
+[06/07/2026-16:06:04] [I] Inference Streams: 1
+[06/07/2026-16:06:04] [I] ExposeDMA: Disabled
+[06/07/2026-16:06:04] [I] Data transfers: Enabled
+[06/07/2026-16:06:04] [I] Spin-wait: Disabled
+[06/07/2026-16:06:04] [I] Multithreading: Disabled
+[06/07/2026-16:06:04] [I] CUDA Graph: Disabled
+[06/07/2026-16:06:04] [I] Separate profiling: Disabled
+[06/07/2026-16:06:04] [I] Time Deserialize: Disabled
+[06/07/2026-16:06:04] [I] Time Refit: Disabled
+[06/07/2026-16:06:04] [I] NVTX verbosity: 0
+[06/07/2026-16:06:04] [I] Persistent Cache Ratio: 0
+[06/07/2026-16:06:04] [I] Optimization Profile Index: 0
+[06/07/2026-16:06:04] [I] Weight Streaming Budget: 100.000000%
+[06/07/2026-16:06:04] [I] Inputs:
+[06/07/2026-16:06:04] [I] Debug Tensor Save Destinations:
+[06/07/2026-16:06:04] [I] Dump All Debug Tensor in Formats: 
+[06/07/2026-16:06:04] [I] === Reporting Options ===
+[06/07/2026-16:06:04] [I] Verbose: Disabled
+[06/07/2026-16:06:04] [I] Averages: 10 inferences
+[06/07/2026-16:06:04] [I] Percentiles: 90,95,99
+[06/07/2026-16:06:04] [I] Dump refittable layers:Disabled
+[06/07/2026-16:06:04] [I] Dump output: Disabled
+[06/07/2026-16:06:04] [I] Profile: Disabled
+[06/07/2026-16:06:04] [I] Export timing to JSON file: 
+[06/07/2026-16:06:04] [I] Export output to JSON file: 
+[06/07/2026-16:06:04] [I] Export profile to JSON file: 
+[06/07/2026-16:06:04] [I] 
+[06/07/2026-16:06:04] [I] === Device Information ===
+[06/07/2026-16:06:04] [I] Available Devices: 
+[06/07/2026-16:06:04] [I]   Device 0: "NVIDIA GeForce RTX 4090" UUID: GPU-ecde2256-9c06-55af-a9e9-f5ddb7072ede
+[06/07/2026-16:06:04] [I] Selected Device: NVIDIA GeForce RTX 4090
+[06/07/2026-16:06:04] [I] Selected Device ID: 0
+[06/07/2026-16:06:04] [I] Selected Device UUID: GPU-ecde2256-9c06-55af-a9e9-f5ddb7072ede
+[06/07/2026-16:06:04] [I] Compute Capability: 8.9
+[06/07/2026-16:06:04] [I] SMs: 128
+[06/07/2026-16:06:04] [I] Device Global Memory: 24080 MiB
+[06/07/2026-16:06:04] [I] Shared Memory per SM: 100 KiB
+[06/07/2026-16:06:04] [I] Memory Bus Width: 384 bits (ECC disabled)
+[06/07/2026-16:06:04] [I] Application Compute Clock Rate: 2.55 GHz
+[06/07/2026-16:06:04] [I] Application Memory Clock Rate: 10.501 GHz
+[06/07/2026-16:06:04] [I] 
+[06/07/2026-16:06:04] [I] Note: The application clock rates do not reflect the actual clock rates that the GPU is currently running at.
+[06/07/2026-16:06:04] [I] 
+[06/07/2026-16:06:04] [I] TensorRT version: 10.14.1
+[06/07/2026-16:06:04] [I] Loading standard plugins
+[06/07/2026-16:06:04] [I] [TRT] [MemUsageChange] Init CUDA: CPU +0, GPU +0, now: CPU 29, GPU 394 (MiB)
+[06/07/2026-16:06:05] [I] Start parsing network model.
+[06/07/2026-16:06:05] [I] [TRT] ----------------------------------------------------------------
+[06/07/2026-16:06:05] [I] [TRT] Input filename:   models/yolo26s/best.onnx
+[06/07/2026-16:06:05] [I] [TRT] ONNX IR version:  0.0.8
+[06/07/2026-16:06:05] [I] [TRT] Opset version:    17
+[06/07/2026-16:06:05] [I] [TRT] Producer name:    pytorch
+[06/07/2026-16:06:05] [I] [TRT] Producer version: 2.11.0
+[06/07/2026-16:06:05] [I] [TRT] Domain:           
+[06/07/2026-16:06:05] [I] [TRT] Model version:    0
+[06/07/2026-16:06:05] [I] [TRT] Doc string:       
+[06/07/2026-16:06:05] [I] [TRT] ----------------------------------------------------------------
+[06/07/2026-16:06:05] [I] Finished parsing network model. Parse time: 0.0656255
+[06/07/2026-16:06:05] [I] Set shape of input tensor images for optimization profile 0 to: MIN=1x3x448x448 OPT=1x3x448x448 MAX=1x3x448x448
+[06/07/2026-16:06:05] [W] [TRT] Could not read cache from: /work/trt_bench_streams/cache/yolo26s.cache. A new cache will be generated and written.
+[06/07/2026-16:06:05] [I] [TRT] [MemUsageChange] Init builder kernel library: CPU +205, GPU +4, now: CPU 542, GPU 398 (MiB)
+[06/07/2026-16:06:05] [I] [TRT] Global timing cache in use. Profiling results in this builder pass will be stored.
+[06/07/2026-16:08:01] [I] [TRT] Compiler backend is used during engine build.
+[06/07/2026-16:09:18] [I] [TRT] Detected 1 inputs and 1 output network tensors.
+[06/07/2026-16:09:20] [I] [TRT] Total Host Persistent Memory: 599664 bytes
+[06/07/2026-16:09:20] [I] [TRT] Total Device Persistent Memory: 1024 bytes
+[06/07/2026-16:09:20] [I] [TRT] Max Scratch Memory: 1430016 bytes
+[06/07/2026-16:09:20] [I] [TRT] [BlockAssignment] Started assigning block shifts. This will take 177 steps to complete.
+[06/07/2026-16:09:20] [I] [TRT] [BlockAssignment] Algorithm ShiftNTopDown took 7.33068ms to assign 11 blocks to 177 nodes requiring 9333760 bytes.
+[06/07/2026-16:09:20] [I] [TRT] Total Activation Memory: 9332736 bytes
+[06/07/2026-16:09:20] [I] [TRT] Total Weights Memory: 18993352 bytes
+[06/07/2026-16:09:20] [I] [TRT] Compiler backend is used during engine execution.
+[06/07/2026-16:09:20] [I] [TRT] Engine generation completed in 195.258 seconds.
+[06/07/2026-16:09:20] [I] [TRT] [MemUsageStats] Peak memory usage of TRT CPU/GPU memory allocators: CPU 2 MiB, GPU 49 MiB
+[06/07/2026-16:09:20] [I] Created engine with size: 20.2095 MiB
+[06/07/2026-16:09:20] [I] Engine built in 195.733 sec.
+[06/07/2026-16:09:20] [W] [TRT] Could not read cache from: /work/trt_bench_streams/cache/yolo26s.cache. A new cache will be generated and written.
+[06/07/2026-16:09:20] [I] [TRT] Serialized 502 bytes of code generator cache.
+[06/07/2026-16:09:20] [I] [TRT] Serialized 299881 bytes of compilation cache.
+[06/07/2026-16:09:20] [I] [TRT] Serialized 6448 timing cache entries
+[06/07/2026-16:09:20] [I] [TRT] Saved 971143 bytes of timing cache to /work/trt_bench_streams/cache/yolo26s.cache
+[06/07/2026-16:09:20] [I] [TRT] Loaded engine size: 20 MiB
+[06/07/2026-16:09:20] [I] Engine deserialized in 0.0244266 sec.
+[06/07/2026-16:09:20] [I] Skipped inference phase since --skipInference is added.
+&&&& PASSED TensorRT.trtexec [TensorRT v101401] [b48] # trtexec --onnx=models/yolo26s/best.onnx --fp16 --minShapes=images:1x3x448x448 --optShapes=images:1x3x448x448 --maxShapes=images:1x3x448x448 --saveEngine=/work/trt_bench_streams/engines/yolo26s_b1.engine --timingCacheFile=/work/trt_bench_streams/cache/yolo26s.cache --memPoolSize=workspace:8192 --skipInference

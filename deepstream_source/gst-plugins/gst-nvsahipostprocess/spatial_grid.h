@@ -1,6 +1,9 @@
 /*
  * SPDX-FileCopyrightText: Copyright (c) 2026 Levi Pereira <levi.pereira@gmail.com>
- * SPDX-License-Identifier: LicenseRef-NvidiaDeepStreamEULA
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0; see the LICENSE file in this
+ * directory or http://www.apache.org/licenses/LICENSE-2.0
  *
  * 2D spatial hash grid for fast neighbor queries on axis-aligned bounding boxes.
  *
@@ -53,6 +56,10 @@ public:
         }
       }
     }
+
+    /* visited-stamp scratch for O(k) dedup in query() (no sort/unique) */
+    stamp_.assign (count, 0);
+    gen_ = 0;
   }
 
   void query (const SahiGridRect &box, std::vector<guint> &result) const
@@ -60,19 +67,26 @@ public:
     result.clear ();
     guint c0, r0, c1, r1;
     cell_range (box, c0, r0, c1, r1);
+    /* Dedup with a per-build generation stamp: O(k), no sort/unique. */
+    ++gen_;
     for (guint r = r0; r <= r1; r++) {
       for (guint c = c0; c <= c1; c++) {
         const auto &cell = cells_[r * cols_ + c];
-        result.insert (result.end (), cell.begin (), cell.end ());
+        for (guint idx : cell) {
+          if (stamp_[idx] != gen_) {
+            stamp_[idx] = gen_;
+            result.push_back (idx);
+          }
+        }
       }
     }
-    std::sort (result.begin (), result.end ());
-    result.erase (std::unique (result.begin (), result.end ()), result.end ());
   }
 
   void clear ()
   {
     cells_.clear ();
+    stamp_.clear ();
+    gen_ = 0;
     cols_ = rows_ = 0;
   }
 
@@ -90,6 +104,8 @@ private:
   guint  cols_ = 0;
   guint  rows_ = 0;
   std::vector<std::vector<guint>> cells_;
+  mutable std::vector<guint> stamp_;   /* visited stamp per box (query dedup) */
+  mutable guint gen_ = 0;              /* current query generation */
 };
 
 #endif /* __SAHI_SPATIAL_GRID_H__ */
